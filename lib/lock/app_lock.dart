@@ -5,6 +5,7 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -103,7 +104,8 @@ class _AppLockGateState extends ConsumerState<AppLockGate> with WidgetsBindingOb
   }
 
   Future<void> _applySecureWindow(bool secure) async {
-    if (!Platform.isAndroid && !Platform.isIOS) return;
+    // FLAG_SECURE blanks emulator screenshots and screen mirroring, which debugging relies on.
+    if (kDebugMode || (!Platform.isAndroid && !Platform.isIOS)) return;
     await _windowChannel.invokeMethod('setSecure', secure);
   }
 

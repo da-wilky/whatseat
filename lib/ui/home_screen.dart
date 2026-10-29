@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -117,6 +118,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       body: Column(
         children: [
           _WeekStrip(selected: _day, today: _today, onSelect: _goTo),
+          const _RunningMealBanner(),
           Expanded(
             child: PageView.builder(
               controller: _pages,
@@ -130,6 +132,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         onPressed: () => showQuickAddSheet(context, _day),
         icon: const Icon(Icons.add_rounded),
         label: Text(l.addEntry),
+      ),
+    );
+  }
+}
+
+class _RunningMealBanner extends ConsumerWidget {
+  const _RunningMealBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final entry = ref.watch(runningMealProvider).value;
+    if (entry == null) return const SizedBox.shrink();
+    final l = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Card(
+        color: scheme.primaryContainer,
+        child: ListTile(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          leading: Icon(Icons.timelapse_rounded, color: scheme.onPrimaryContainer),
+          title: Text(l.runningSince(mealLabel(l, entry.meal), formatMinutes(entry.startMinutes)),
+              style: TextStyle(color: scheme.onPrimaryContainer)),
+          trailing: FilledButton(onPressed: () => finishEating(context, entry), child: Text(l.finishEating)),
+          onTap: () => openEntryEditor(context, EntryDraft.fromEntry(entry)),
+        ),
       ),
     );
   }
@@ -258,7 +286,7 @@ class _DayViewState extends ConsumerState<_DayView> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
       children: [
-        if (entries.isNotEmpty) ...[_DaySummary(entries: entries), const SizedBox(height: 12)],
+        if (entries.isNotEmpty) ...[_DayTimeline(entries: entries), const SizedBox(height: 12)],
         _DayNoteTile(day: key, note: note),
         const SizedBox(height: 12),
         if (entries.isEmpty)
@@ -281,61 +309,80 @@ class _DayViewState extends ConsumerState<_DayView> {
   }
 }
 
-class _DaySummary extends StatelessWidget {
-  const _DaySummary({required this.entries});
+/// Shows when meals happened; long gaps stand out without counting or averaging anything.
+class _DayTimeline extends StatelessWidget {
+  const _DayTimeline({required this.entries});
 
   final List<MealEntry> entries;
 
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    String avg(Iterable<int?> values) {
-      final known = values.whereType<int>().toList();
-      return known.isEmpty ? '–' : '${(known.reduce((a, b) => a + b) / known.length).round()} %';
-    }
+  static const _marker = 26.0;
 
-    final binges = entries.where((e) => e.binge).length;
-    final measures = entries.where((e) => e.measures.isNotEmpty).length;
-    return Row(
-      children: [
-        _Stat(label: l.statMeals, value: '${entries.length}'),
-        _Stat(label: l.statHunger, value: avg(entries.map((e) => e.hunger))),
-        _Stat(label: l.statSatiety, value: avg(entries.map((e) => e.satiety))),
-        _Stat(label: l.statBinges, value: '$binges', highlight: binges > 0),
-        _Stat(label: l.statMeasures, value: '$measures', highlight: measures > 0),
-      ],
-    );
-  }
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat({required this.label, required this.value, this.highlight = false});
-
-  final String label;
-  final String value;
-  final bool highlight;
+  (Color, Color) _colors(ColorScheme s, MealType meal) => switch (meal) {
+        MealType.breakfast => (s.tertiaryContainer, s.onTertiaryContainer),
+        MealType.lunch => (s.primary, s.onPrimary),
+        MealType.dinner => (s.secondary, s.onSecondary),
+        MealType.snack => (s.secondaryContainer, s.onSecondaryContainer),
+      };
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 3),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: highlight ? scheme.errorContainer : scheme.secondaryContainer.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          children: [
-            Text(value,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700, color: highlight ? scheme.onErrorContainer : scheme.onSecondaryContainer)),
-            Text(label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11, color: highlight ? scheme.onErrorContainer : scheme.onSecondaryContainer)),
-          ],
+    final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant);
+    var from = 5 * 60;
+    var to = 23 * 60;
+    for (final e in entries) {
+      from = min(from, e.startMinutes ~/ 60 * 60);
+      to = min(max(to, (max(e.startMinutes, e.endMinutes ?? 0) ~/ 60 + 1) * 60), 24 * 60);
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+        child: SizedBox(
+          height: _marker + 18,
+          child: LayoutBuilder(builder: (context, box) {
+            double x(int minutes) => (minutes - from) / (to - from) * (box.maxWidth - _marker);
+            return Stack(children: [
+              Positioned(
+                left: _marker / 2,
+                right: _marker / 2,
+                top: _marker / 2 - 1,
+                child: Container(height: 2, color: scheme.outlineVariant),
+              ),
+              for (final hour in const [6, 12, 18])
+                if (hour * 60 > from && hour * 60 < to)
+                  Positioned(
+                    left: x(hour * 60) + _marker / 2 - 20,
+                    width: 40,
+                    top: _marker + 2,
+                    child: Text('$hour:00', textAlign: TextAlign.center, style: labelStyle),
+                  ),
+              for (final e in entries) ...[
+                if (e.endMinutes != null && e.endMinutes! > e.startMinutes)
+                  Positioned(
+                    left: x(e.startMinutes) + _marker / 2,
+                    width: x(e.endMinutes!) - x(e.startMinutes),
+                    top: _marker / 2 - 3,
+                    child: Container(
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: _colors(scheme, e.meal).$1,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                Positioned(
+                  left: x(e.startMinutes),
+                  top: 0,
+                  child: CircleAvatar(
+                    radius: _marker / 2,
+                    backgroundColor: _colors(scheme, e.meal).$1,
+                    child: Icon(mealIcon(e.meal), size: 14, color: _colors(scheme, e.meal).$2),
+                  ),
+                ),
+              ],
+            ]);
+          }),
         ),
       ),
     );
@@ -495,9 +542,9 @@ class _EntryCard extends StatelessWidget {
                       Text(itemsSummary(l, entry.items), style: theme.textTheme.bodyMedium),
                       const SizedBox(height: 8),
                       Wrap(spacing: 6, runSpacing: 6, children: [
-                        if (entry.hunger != null || entry.satiety != null)
-                          badge(Icons.trending_up_rounded,
-                              '${entry.hunger?.toString() ?? '–'} % → ${entry.satiety?.toString() ?? '–'} %'),
+                        if (entry.hunger != null) badge(Icons.wb_twilight_rounded, '${l.hunger} ${entry.hunger} %'),
+                        if (entry.satiety != null) badge(Icons.nights_stay_outlined, '${l.satiety} ${entry.satiety} %'),
+                        if (entry.running) badge(Icons.timelapse_rounded, l.inProgress),
                         if (entry.withWhom.isNotEmpty) badge(Icons.people_outline, entry.withWhom),
                         if (entry.binge) badge(Icons.warning_amber_rounded, l.binge, alert: true),
                         if (entry.measures.isNotEmpty) badge(Icons.flag_outlined, entry.measures, alert: true),

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mirrors assets/icon/icon.svg. The leaf is a cutout so the same drawable works as the themed (monochrome) icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M33,54a21,21 0,1 0,42 0a21,21 0,1 0,-42 0ZM46,62C46,51 51,46 62,46C62,57 57,62 46,62Z" />
+    <path
+        android:pathData="M39,54a15,15 0,1 0,30 0a15,15 0,1 0,-30 0Z"
+        android:strokeWidth="1.5"
+        android:strokeColor="#D3E9E3" />
+    <path
+        android:pathData="M48.5,59.5L56.5,51.5"
+        android:strokeWidth="1.2"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M25,37V45M28,37V45M31,37V45M25,45Q25,50 28,50Q31,50 31,45M28,50V71"
+        android:strokeWidth="2.4"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M83,71V37C79,39 78,46 78,52Q78,54 80,54H83"
+        android:strokeWidth="2.4"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

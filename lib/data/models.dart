@@ -6,9 +6,9 @@ enum MealType { breakfast, lunch, dinner, snack }
 
 MealType mealTypeForTime(int minutes) {
   final h = minutes ~/ 60;
-  if (h >= 5 && h < 10) return MealType.breakfast;
-  if (h >= 11 && h < 14) return MealType.lunch;
-  if (h >= 17 && h < 21) return MealType.dinner;
+  if (h >= 5 && h < 11) return MealType.breakfast;
+  if (h >= 11 && h < 15) return MealType.lunch;
+  if (h >= 17 && h < 22) return MealType.dinner;
   return MealType.snack;
 }
 

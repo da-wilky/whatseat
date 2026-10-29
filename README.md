@@ -39,15 +39,15 @@ Debug builds install as `de.whatseat.whatseat.debug` ("WhatsEat Debug") next to 
 ## Emulator (headless, over SSH)
 
 ```sh
-nix develop path:.#emulator
-avdmanager create avd -n whatseat -k "system-images;android-36;google_apis_playstore;x86_64"
-emulator -avd whatseat -no-window -no-audio -gpu swiftshader_indirect &
-flutter run -d emulator-5554
+./emulator.sh start        # creates the AVD on first run, returns once booted
+nix develop path:. -c flutter run -d emulator-5554
+./emulator.sh stop
 ```
 
 To see and use it from your laptop, forward the emulator's adb port and mirror it with scrcpy:
 
 ```sh
 ssh -L 5555:localhost:5555 <dev-machine>        # on the laptop
+nix shell nixpkgs#android-tools nixpkgs#scrcpy  # on the laptop, second terminal
 adb connect localhost:5555 && scrcpy -s localhost:5555
 ```

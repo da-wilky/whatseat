@@ -182,36 +182,6 @@ abstract class AppLocalizations {
   /// **'Trage alles ein, was du isst und trinkst – am besten direkt nach dem Essen.'**
   String get emptyDayHint;
 
-  /// No description provided for @statMeals.
-  ///
-  /// In de, this message translates to:
-  /// **'Einträge'**
-  String get statMeals;
-
-  /// No description provided for @statHunger.
-  ///
-  /// In de, this message translates to:
-  /// **'Ø Hunger'**
-  String get statHunger;
-
-  /// No description provided for @statSatiety.
-  ///
-  /// In de, this message translates to:
-  /// **'Ø Satt'**
-  String get statSatiety;
-
-  /// No description provided for @statBinges.
-  ///
-  /// In de, this message translates to:
-  /// **'Essanfälle'**
-  String get statBinges;
-
-  /// No description provided for @statMeasures.
-  ///
-  /// In de, this message translates to:
-  /// **'Maßnahmen'**
-  String get statMeasures;
-
   /// No description provided for @dayNote.
   ///
   /// In de, this message translates to:
@@ -907,6 +877,48 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Die unlesbaren Daten werden endgültig gelöscht.'**
   String get recoveryStartFreshConfirm;
+
+  /// No description provided for @startEating.
+  ///
+  /// In de, this message translates to:
+  /// **'Essen beginnen'**
+  String get startEating;
+
+  /// No description provided for @startEatingSave.
+  ///
+  /// In de, this message translates to:
+  /// **'Starten'**
+  String get startEatingSave;
+
+  /// No description provided for @startEatingHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Den Rest trägst du ein, wenn du fertig bist. Alles ist optional.'**
+  String get startEatingHint;
+
+  /// No description provided for @finishEating.
+  ///
+  /// In de, this message translates to:
+  /// **'Essen beenden'**
+  String get finishEating;
+
+  /// No description provided for @whenDidYouStop.
+  ///
+  /// In de, this message translates to:
+  /// **'Wann hast du aufgehört?'**
+  String get whenDidYouStop;
+
+  /// No description provided for @inProgress.
+  ///
+  /// In de, this message translates to:
+  /// **'läuft'**
+  String get inProgress;
+
+  /// No description provided for @runningSince.
+  ///
+  /// In de, this message translates to:
+  /// **'{meal} seit {time}'**
+  String runningSince(String meal, String time);
 }
 
 class _AppLocalizationsDelegate

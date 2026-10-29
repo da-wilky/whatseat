@@ -25,6 +25,8 @@ class MealEntries extends Table {
   BoolColumn get binge => boolean().withDefault(const Constant(false))();
   TextColumn get measures => text().withDefault(const Constant(''))();
   TextColumn get situationAfter => text().withDefault(const Constant(''))();
+  // Started with "start eating" and not finished yet; kept out of exports.
+  BoolColumn get running => boolean().withDefault(const Constant(false))();
   TextColumn get templateId => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
@@ -85,12 +87,25 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          if (from < 2) await m.addColumn(mealEntries, mealEntries.running);
+        },
+      );
 
   Stream<List<MealEntry>> watchDay(String day) => (select(mealEntries)
         ..where((e) => e.day.equals(day) & e.deletedAt.isNull())
         ..orderBy([(e) => OrderingTerm.asc(e.startMinutes)]))
       .watch();
+
+  Stream<MealEntry?> watchRunning() => (select(mealEntries)
+        ..where((e) => e.running & e.deletedAt.isNull())
+        ..orderBy([(e) => OrderingTerm.desc(e.createdAt)])
+        ..limit(1))
+      .watchSingleOrNull();
 
   Stream<Set<String>> watchDaysWithEntries(String from, String to) {
     final q = selectOnly(mealEntries, distinct: true)
@@ -100,7 +115,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<List<MealEntry>> entriesBetween(String from, String to) => (select(mealEntries)
-        ..where((e) => e.day.isBetweenValues(from, to) & e.deletedAt.isNull())
+        ..where((e) => e.day.isBetweenValues(from, to) & e.deletedAt.isNull() & e.running.not())
         ..orderBy([(e) => OrderingTerm.asc(e.day), (e) => OrderingTerm.asc(e.startMinutes)]))
       .get();
 
@@ -249,7 +264,8 @@ class AppDatabase extends _$AppDatabase {
         [for (final r in json[key] as List) r as Map<String, dynamic>];
 
     await transaction(() async {
-      for (final row in rows('entries').map(MealEntry.fromJson)) {
+      // Backups from schema 1 lack the column.
+      for (final row in rows('entries').map((r) => MealEntry.fromJson({'running': false, ...r}))) {
         final local = await (select(mealEntries)..where((e) => e.id.equals(row.id))).getSingleOrNull();
         if (local != null && !row.updatedAt.isAfter(local.updatedAt)) continue;
         await into(mealEntries).insertOnConflictUpdate(row);

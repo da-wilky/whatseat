@@ -71,6 +71,29 @@ void main() {
     await other.close();
   });
 
+  test('running meals stay out of exports until finished', () async {
+    final entry = _entry('2026-10-29', 12 * 60, const []).copyWith(running: const Value(true));
+    await db.saveEntry(entry);
+    expect((await db.watchRunning().first)?.id, entry.id.value);
+    expect(await db.entriesBetween('2026-10-29', '2026-10-29'), isEmpty);
+
+    await db.saveEntry(entry.copyWith(running: const Value(false), items: const Value([FoodItem(food: 'Suppe')])));
+    expect(await db.watchRunning().first, isNull);
+    expect(await db.entriesBetween('2026-10-29', '2026-10-29'), hasLength(1));
+  });
+
+  test('schema 1 backups import', () async {
+    await db.saveEntry(_entry('2026-10-29', 12 * 60, const [FoodItem(food: 'Nudeln')]));
+    final backup = await db.exportBackup();
+    for (final e in backup['entries'] as List) {
+      (e as Map<String, dynamic>).remove('running');
+    }
+
+    final other = AppDatabase.forTesting(NativeDatabase.memory());
+    expect(await other.importBackup(backup), 1);
+    await other.close();
+  });
+
   test('exports render', () async {
     await initializeDateFormatting('de');
     final l = lookupAppLocalizations(const Locale('de'));

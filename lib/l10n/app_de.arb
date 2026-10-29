@@ -14,11 +14,6 @@
   "reuseHint": "Gespeicherte Vorlagen und zuletzt gegessene Mahlzeiten erscheinen hier, damit du sie mit einem Tipp erneut eintragen kannst.",
   "emptyDay": "Noch nichts eingetragen",
   "emptyDayHint": "Trage alles ein, was du isst und trinkst – am besten direkt nach dem Essen.",
-  "statMeals": "Einträge",
-  "statHunger": "Ø Hunger",
-  "statSatiety": "Ø Satt",
-  "statBinges": "Essanfälle",
-  "statMeasures": "Maßnahmen",
   "dayNote": "Tagesnotiz",
   "dayNoteAdd": "Tagesnotiz hinzufügen",
   "dayNoteHint": "z. B. Diät oder Krankheit an diesem Tag",
@@ -176,5 +171,22 @@
   "recoveryBody": "Die verschlüsselten Daten auf diesem Gerät lassen sich nicht öffnen – meist, weil der Schlüssel im sicheren Speicher des Geräts verloren gegangen ist. Ohne ihn sind die Daten nicht wiederherstellbar.\n\nVersuche es zuerst erneut (z. B. nach einem Neustart). Hilft das nicht, kannst du ein Backup einspielen oder neu beginnen.",
   "recoveryRetry": "Erneut versuchen",
   "recoveryStartFresh": "Neu beginnen",
-  "recoveryStartFreshConfirm": "Die unlesbaren Daten werden endgültig gelöscht."
+  "recoveryStartFreshConfirm": "Die unlesbaren Daten werden endgültig gelöscht.",
+  "startEating": "Essen beginnen",
+  "startEatingSave": "Starten",
+  "startEatingHint": "Den Rest trägst du ein, wenn du fertig bist. Alles ist optional.",
+  "finishEating": "Essen beenden",
+  "whenDidYouStop": "Wann hast du aufgehört?",
+  "inProgress": "läuft",
+  "runningSince": "{meal} seit {time}",
+  "@runningSince": {
+    "placeholders": {
+      "meal": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -9,14 +9,14 @@ import 'common.dart';
 import 'entry_editor.dart';
 
 Future<void> showQuickAddSheet(BuildContext context, DateTime day) async {
-  final draft = await showModalBottomSheet<EntryDraft>(
+  final picked = await showModalBottomSheet<(EntryDraft, EditorMode)>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
     useSafeArea: true,
     builder: (_) => _QuickAddSheet(day: day),
   );
-  if (draft != null && context.mounted) await openEntryEditor(context, draft);
+  if (picked != null && context.mounted) await openEntryEditor(context, picked.$1, mode: picked.$2);
 }
 
 final _recentMealsProvider =
@@ -33,6 +33,7 @@ class _QuickAddSheet extends ConsumerWidget {
     final theme = Theme.of(context);
     final templates = ref.watch(templatesProvider).value ?? const [];
     final recent = ref.watch(_recentMealsProvider).value ?? const [];
+    final canStart = dateOnly(day) == dateOnly(DateTime.now()) && ref.watch(runningMealProvider).value == null;
 
     Widget header(String text) => Padding(
           padding: const EdgeInsets.fromLTRB(4, 20, 4, 8),
@@ -47,9 +48,18 @@ class _QuickAddSheet extends ConsumerWidget {
         controller: scroll,
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         children: [
-          FilledButton.icon(
+          if (canStart) ...[
+            FilledButton.icon(
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
+              onPressed: () => Navigator.pop(context, (EntryDraft.fresh(day), EditorMode.start)),
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: Text(l.startEating),
+            ),
+            const SizedBox(height: 8),
+          ],
+          (canStart ? FilledButton.tonalIcon : FilledButton.icon)(
             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
-            onPressed: () => Navigator.pop(context, EntryDraft.fresh(day)),
+            onPressed: () => Navigator.pop(context, (EntryDraft.fresh(day), EditorMode.edit)),
             icon: const Icon(Icons.edit_note_rounded),
             label: Text(l.newEntry),
           ),
@@ -60,7 +70,7 @@ class _QuickAddSheet extends ConsumerWidget {
                 icon: t.pinned ? Icons.push_pin_rounded : Icons.bookmark_outline_rounded,
                 title: t.name,
                 subtitle: itemsSummary(l, t.items),
-                onTap: () => Navigator.pop(context, EntryDraft.fromTemplate(t, day)),
+                onTap: () => Navigator.pop(context, (EntryDraft.fromTemplate(t, day), EditorMode.edit)),
               ),
           ],
           if (recent.isNotEmpty) ...[
@@ -70,7 +80,7 @@ class _QuickAddSheet extends ConsumerWidget {
                 icon: mealIcon(e.meal),
                 title: itemsSummary(l, e.items),
                 subtitle: '${mealLabel(l, e.meal)} · ${relativeDayLabel(context, parseDayKey(e.day))}',
-                onTap: () => Navigator.pop(context, EntryDraft.repeat(e, day)),
+                onTap: () => Navigator.pop(context, (EntryDraft.repeat(e, day), EditorMode.edit)),
               ),
           ],
           if (templates.isEmpty && recent.isEmpty)

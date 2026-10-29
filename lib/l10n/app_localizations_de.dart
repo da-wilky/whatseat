@@ -54,21 +54,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Trage alles ein, was du isst und trinkst – am besten direkt nach dem Essen.';
 
   @override
-  String get statMeals => 'Einträge';
-
-  @override
-  String get statHunger => 'Ø Hunger';
-
-  @override
-  String get statSatiety => 'Ø Satt';
-
-  @override
-  String get statBinges => 'Essanfälle';
-
-  @override
-  String get statMeasures => 'Maßnahmen';
-
-  @override
   String get dayNote => 'Tagesnotiz';
 
   @override
@@ -444,4 +429,28 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get recoveryStartFreshConfirm =>
       'Die unlesbaren Daten werden endgültig gelöscht.';
+
+  @override
+  String get startEating => 'Essen beginnen';
+
+  @override
+  String get startEatingSave => 'Starten';
+
+  @override
+  String get startEatingHint =>
+      'Den Rest trägst du ein, wenn du fertig bist. Alles ist optional.';
+
+  @override
+  String get finishEating => 'Essen beenden';
+
+  @override
+  String get whenDidYouStop => 'Wann hast du aufgehört?';
+
+  @override
+  String get inProgress => 'läuft';
+
+  @override
+  String runningSince(String meal, String time) {
+    return '$meal seit $time';
+  }
 }

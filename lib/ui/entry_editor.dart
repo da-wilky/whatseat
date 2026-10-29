@@ -34,6 +34,7 @@ class EntryDraft {
     this.measures = '',
     this.situationAfter = '',
     this.templateId,
+    this.running = false,
     this.createdAt,
   });
 
@@ -92,6 +93,7 @@ class EntryDraft {
         measures: e.measures,
         situationAfter: e.situationAfter,
         templateId: e.templateId,
+        running: e.running,
         createdAt: e.createdAt,
       );
 
@@ -110,6 +112,7 @@ class EntryDraft {
   String measures;
   String situationAfter;
   String? templateId;
+  bool running;
   final DateTime? createdAt;
 
   MealEntriesCompanion toCompanion() {
@@ -130,16 +133,39 @@ class EntryDraft {
       measures: Value(measures),
       situationAfter: Value(situationAfter),
       templateId: Value(templateId),
+      running: Value(running),
       createdAt: createdAt ?? now,
       updatedAt: now,
     );
   }
 }
 
-Future<void> openEntryEditor(BuildContext context, EntryDraft draft) => Navigator.push(
+enum EditorMode { edit, start, finish }
+
+Future<void> openEntryEditor(BuildContext context, EntryDraft draft, {EditorMode mode = EditorMode.edit}) => Navigator.push(
       context,
-      MaterialPageRoute(fullscreenDialog: true, builder: (_) => EntryEditor(draft: draft)),
+      MaterialPageRoute(fullscreenDialog: true, builder: (_) => EntryEditor(draft: draft, mode: mode)),
     );
+
+/// A meal left running for hours was most likely not stopped in time, so the end is asked for instead of assumed.
+Future<void> finishEating(BuildContext context, MealEntry entry) async {
+  final draft = EntryDraft.fromEntry(entry);
+  final day = parseDayKey(entry.day);
+  final started = DateTime(day.year, day.month, day.day, 0, entry.startMinutes);
+  final now = DateTime.now();
+  if (now.difference(started) > const Duration(hours: 2)) {
+    final picked = await showTimePicker(
+      context: context,
+      helpText: AppLocalizations.of(context).whenDidYouStop,
+      initialTime: TimeOfDay.fromDateTime(started.add(const Duration(minutes: 30))),
+    );
+    if (picked == null || !context.mounted) return;
+    draft.end = picked.hour * 60 + picked.minute;
+  } else {
+    draft.end = now.hour * 60 + now.minute;
+  }
+  await openEntryEditor(context, draft, mode: EditorMode.finish);
+}
 
 class _ItemRow {
   _ItemRow(FoodItem item, String quantityText, {required this.touched})
@@ -164,9 +190,10 @@ class _ItemRow {
 }
 
 class EntryEditor extends ConsumerStatefulWidget {
-  const EntryEditor({super.key, required this.draft});
+  const EntryEditor({super.key, required this.draft, this.mode = EditorMode.edit});
 
   final EntryDraft draft;
+  final EditorMode mode;
 
   @override
   ConsumerState<EntryEditor> createState() => _EntryEditorState();
@@ -187,6 +214,8 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
   List<String> _measureHistory = const [];
   List<String> _unitHistory = const [];
   bool _dirty = false;
+
+  bool get _staysRunning => widget.mode == EditorMode.start || (widget.mode == EditorMode.edit && _d.running);
 
   @override
   void initState() {
@@ -273,7 +302,8 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
   Future<void> _save() async {
     final l = AppLocalizations.of(context);
     _applyTexts();
-    if (_d.items.isEmpty) {
+    _d.running = _staysRunning;
+    if (_d.items.isEmpty && !_d.running) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.needOneItem)));
       _rows.first.foodFocus.requestFocus();
       return;
@@ -378,7 +408,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
           controller: row.food,
           focusNode: row.foodFocus,
           hint: l.foodHint,
-          autofocus: index == 0 && _d.id == null && _d.items.isEmpty,
+          autofocus: index == 0 && _d.items.isEmpty && (_d.id == null || widget.mode == EditorMode.finish),
           options: (q) => q.isEmpty
               ? _foods.take(6).toList()
               : _foods.where((f) => f.food.toLowerCase().contains(q.toLowerCase())).take(8).toList(),
@@ -412,6 +442,112 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
     final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     const gap = SizedBox(height: 12);
+    final saveLabel = widget.mode == EditorMode.start ? l.startEatingSave : l.save;
+
+    final meal = SectionCard(title: l.sectionMeal, icon: Icons.schedule_rounded, children: [
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final m in MealType.values)
+          ChoiceChip(
+            avatar: Icon(mealIcon(m), size: 18),
+            label: Text(mealLabel(l, m)),
+            selected: _d.meal == m,
+            onSelected: (_) => _change(() => _d.meal = m),
+          ),
+      ]),
+      gap,
+      Row(children: [
+        ActionChip(
+          avatar: const Icon(Icons.play_arrow_rounded, size: 18),
+          label: Text('${l.timeFrom} ${formatMinutes(_d.start)}'),
+          onPressed: () => _pickTime(end: false),
+        ),
+        const SizedBox(width: 8),
+        if (!_staysRunning)
+          InputChip(
+            avatar: const Icon(Icons.stop_rounded, size: 18),
+            label: Text(_d.end == null ? l.timeToAdd : '${l.timeTo} ${formatMinutes(_d.end!)}'),
+            onPressed: () => _pickTime(end: true),
+            onDeleted: _d.end == null ? null : () => _change(() => _d.end = null),
+          ),
+      ]),
+    ]);
+    final food = SectionCard(title: l.sectionFood, icon: Icons.restaurant_rounded, children: [
+      for (final (i, row) in _rows.indexed) ...[
+        if (i > 0) const Divider(height: 24),
+        KeyedSubtree(key: ObjectKey(row), child: _itemRow(l, i, row)),
+      ],
+      const SizedBox(height: 4),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(onPressed: _addRow, icon: const Icon(Icons.add_rounded), label: Text(l.addItem)),
+      ),
+    ]);
+    final who = SectionCard(title: l.withWhom, icon: Icons.people_outline_rounded, children: [
+      TagPicker(
+        value: _d.withWhom,
+        suggestions: {..._whoHistory, ...l.withWhomDefaults.split('|')}.toList(),
+        onChanged: (v) => _change(() => _d.withWhom = v),
+      ),
+    ]);
+    final before = SectionCard(title: l.sectionBefore, icon: Icons.wb_twilight_rounded, children: [
+      PercentSlider(label: l.hunger, value: _d.hunger, initial: 50, onChanged: (v) => _change(() => _d.hunger = v)),
+      gap,
+      TextField(
+        controller: _appetiteFor,
+        onChanged: (_) => _markDirty(),
+        decoration: InputDecoration(labelText: l.appetiteFor),
+      ),
+      gap,
+      TextField(
+        controller: _before,
+        onChanged: (_) => _markDirty(),
+        minLines: 2,
+        maxLines: 6,
+        decoration: InputDecoration(labelText: l.situationBefore, alignLabelWithHint: true),
+      ),
+    ]);
+    final after = SectionCard(title: l.sectionAfter, icon: Icons.nights_stay_outlined, children: [
+      PercentSlider(label: l.satiety, value: _d.satiety, initial: 90, onChanged: (v) => _change(() => _d.satiety = v)),
+      gap,
+      TextField(
+        controller: _after,
+        onChanged: (_) => _markDirty(),
+        minLines: 2,
+        maxLines: 6,
+        decoration: InputDecoration(labelText: l.situationAfter, alignLabelWithHint: true),
+      ),
+    ]);
+    final behaviour = SectionCard(title: l.sectionBehaviour, icon: Icons.flag_outlined, children: [
+      SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(l.binge),
+        subtitle: Text(l.bingeHint),
+        value: _d.binge,
+        onChanged: (v) => _change(() => _d.binge = v),
+      ),
+      gap,
+      Text(l.measures, style: theme.textTheme.bodyMedium),
+      const SizedBox(height: 8),
+      TagPicker(
+        value: _d.measures,
+        suggestions: {..._measureHistory, ...l.measureDefaults.split('|')}.toList(),
+        onChanged: (v) => _change(() => _d.measures = v),
+      ),
+    ]);
+    final sections = switch (widget.mode) {
+      EditorMode.start => [meal, who, before],
+      EditorMode.finish => [food, after, behaviour, meal, who, before],
+      EditorMode.edit => [meal, food, who, before, after, behaviour],
+    };
+
+    Widget hint(IconData icon, String text) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(children: [
+            Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(width: 6),
+            Expanded(child: Text(text, style: theme.textTheme.bodySmall)),
+          ]),
+        );
 
     return PopScope(
       canPop: !_dirty,
@@ -431,13 +567,17 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(_d.id == null ? l.newEntry : l.editEntry),
+          title: Text(switch (widget.mode) {
+            EditorMode.start => l.startEating,
+            EditorMode.finish => l.finishEating,
+            EditorMode.edit => _d.id == null ? l.newEntry : l.editEntry,
+          }),
           actions: [
-            TextButton(onPressed: _save, child: Text(l.save)),
+            TextButton(onPressed: _save, child: Text(saveLabel)),
             PopupMenuButton<VoidCallback>(
               onSelected: (action) => action(),
               itemBuilder: (_) => [
-                PopupMenuItem(value: _saveAsTemplate, child: Text(l.saveAsTemplate)),
+                if (widget.mode != EditorMode.start) PopupMenuItem(value: _saveAsTemplate, child: Text(l.saveAsTemplate)),
                 if (_d.id != null) PopupMenuItem(value: _delete, child: Text(l.delete)),
               ],
             ),
@@ -446,113 +586,14 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
         body: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
           children: [
-            if (_d.templateId != null) ...[
-              Row(children: [
-                Icon(Icons.bookmark_outline_rounded, size: 16, color: theme.colorScheme.onSurfaceVariant),
-                const SizedBox(width: 6),
-                Expanded(child: Text(l.fromTemplateHint, style: theme.textTheme.bodySmall)),
-              ]),
-              gap,
-            ],
-            SectionCard(title: l.sectionMeal, icon: Icons.schedule_rounded, children: [
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                for (final m in MealType.values)
-                  ChoiceChip(
-                    avatar: Icon(mealIcon(m), size: 18),
-                    label: Text(mealLabel(l, m)),
-                    selected: _d.meal == m,
-                    onSelected: (_) => _change(() => _d.meal = m),
-                  ),
-              ]),
-              gap,
-              Row(children: [
-                ActionChip(
-                  avatar: const Icon(Icons.play_arrow_rounded, size: 18),
-                  label: Text('${l.timeFrom} ${formatMinutes(_d.start)}'),
-                  onPressed: () => _pickTime(end: false),
-                ),
-                const SizedBox(width: 8),
-                InputChip(
-                  avatar: const Icon(Icons.stop_rounded, size: 18),
-                  label: Text(_d.end == null ? l.timeToAdd : '${l.timeTo} ${formatMinutes(_d.end!)}'),
-                  onPressed: () => _pickTime(end: true),
-                  onDeleted: _d.end == null ? null : () => _change(() => _d.end = null),
-                ),
-              ]),
-            ]),
-            gap,
-            SectionCard(title: l.sectionFood, icon: Icons.restaurant_rounded, children: [
-              for (final (i, row) in _rows.indexed) ...[
-                if (i > 0) const Divider(height: 24),
-                KeyedSubtree(key: ObjectKey(row), child: _itemRow(l, i, row)),
-              ],
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(onPressed: _addRow, icon: const Icon(Icons.add_rounded), label: Text(l.addItem)),
-              ),
-            ]),
-            gap,
-            SectionCard(title: l.withWhom, icon: Icons.people_outline_rounded, children: [
-              TagPicker(
-                value: _d.withWhom,
-                suggestions: {..._whoHistory, ...l.withWhomDefaults.split('|')}.toList(),
-                onChanged: (v) => _change(() => _d.withWhom = v),
-              ),
-            ]),
-            gap,
-            SectionCard(title: l.sectionBefore, icon: Icons.wb_twilight_rounded, children: [
-              PercentSlider(label: l.hunger, value: _d.hunger, onChanged: (v) => _change(() => _d.hunger = v)),
-              gap,
-              TextField(
-                controller: _appetiteFor,
-                onChanged: (_) => _markDirty(),
-                decoration: InputDecoration(labelText: l.appetiteFor),
-              ),
-              gap,
-              TextField(
-                controller: _before,
-                onChanged: (_) => _markDirty(),
-                minLines: 2,
-                maxLines: 6,
-                decoration: InputDecoration(labelText: l.situationBefore, alignLabelWithHint: true),
-              ),
-            ]),
-            gap,
-            SectionCard(title: l.sectionAfter, icon: Icons.nights_stay_outlined, children: [
-              PercentSlider(label: l.satiety, value: _d.satiety, onChanged: (v) => _change(() => _d.satiety = v)),
-              gap,
-              TextField(
-                controller: _after,
-                onChanged: (_) => _markDirty(),
-                minLines: 2,
-                maxLines: 6,
-                decoration: InputDecoration(labelText: l.situationAfter, alignLabelWithHint: true),
-              ),
-            ]),
-            gap,
-            SectionCard(title: l.sectionBehaviour, icon: Icons.flag_outlined, children: [
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(l.binge),
-                subtitle: Text(l.bingeHint),
-                value: _d.binge,
-                onChanged: (v) => _change(() => _d.binge = v),
-              ),
-              gap,
-              Text(l.measures, style: theme.textTheme.bodyMedium),
-              const SizedBox(height: 8),
-              TagPicker(
-                value: _d.measures,
-                suggestions: {..._measureHistory, ...l.measureDefaults.split('|')}.toList(),
-                onChanged: (v) => _change(() => _d.measures = v),
-              ),
-            ]),
+            if (_d.templateId != null) hint(Icons.bookmark_outline_rounded, l.fromTemplateHint),
+            if (widget.mode == EditorMode.start) hint(Icons.timelapse_rounded, l.startEatingHint),
+            for (final (i, section) in sections.indexed) ...[if (i > 0) gap, section],
             const SizedBox(height: 20),
             FilledButton(
               style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
               onPressed: _save,
-              child: Text(l.save),
+              child: Text(saveLabel),
             ),
           ],
         ),
@@ -676,10 +717,13 @@ class _SuggestField<T extends Object> extends StatelessWidget {
 }
 
 class PercentSlider extends StatelessWidget {
-  const PercentSlider({super.key, required this.label, required this.value, required this.onChanged});
+  const PercentSlider({super.key, required this.label, required this.value, required this.initial, required this.onChanged});
 
   final String label;
   final int? value;
+
+  /// Where the thumb rests while unset; only a touch stores a value, so untouched entries stay distinguishable.
+  final int initial;
   final ValueChanged<int?> onChanged;
 
   @override
@@ -707,7 +751,7 @@ class PercentSlider extends StatelessWidget {
         Opacity(
           opacity: v == null ? 0.45 : 1,
           child: Slider(
-            value: (v ?? 0).toDouble(),
+            value: (v ?? initial).toDouble(),
             max: 100,
             divisions: 10,
             onChanged: (x) => onChanged(x.round()),

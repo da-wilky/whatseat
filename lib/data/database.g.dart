@@ -160,6 +160,21 @@ class $MealEntriesTable extends MealEntries
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _runningMeta = const VerificationMeta(
+    'running',
+  );
+  @override
+  late final GeneratedColumn<bool> running = GeneratedColumn<bool>(
+    'running',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("running" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _templateIdMeta = const VerificationMeta(
     'templateId',
   );
@@ -220,6 +235,7 @@ class $MealEntriesTable extends MealEntries
     binge,
     measures,
     situationAfter,
+    running,
     templateId,
     createdAt,
     updatedAt,
@@ -324,6 +340,12 @@ class $MealEntriesTable extends MealEntries
         ),
       );
     }
+    if (data.containsKey('running')) {
+      context.handle(
+        _runningMeta,
+        running.isAcceptableOrUnknown(data['running']!, _runningMeta),
+      );
+    }
     if (data.containsKey('template_id')) {
       context.handle(
         _templateIdMeta,
@@ -421,6 +443,10 @@ class $MealEntriesTable extends MealEntries
         DriftSqlType.string,
         data['${effectivePrefix}situation_after'],
       )!,
+      running: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}running'],
+      )!,
       templateId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}template_id'],
@@ -466,6 +492,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
   final bool binge;
   final String measures;
   final String situationAfter;
+  final bool running;
   final String? templateId;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -485,6 +512,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
     required this.binge,
     required this.measures,
     required this.situationAfter,
+    required this.running,
     this.templateId,
     required this.createdAt,
     required this.updatedAt,
@@ -519,6 +547,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
     map['binge'] = Variable<bool>(binge);
     map['measures'] = Variable<String>(measures);
     map['situation_after'] = Variable<String>(situationAfter);
+    map['running'] = Variable<bool>(running);
     if (!nullToAbsent || templateId != null) {
       map['template_id'] = Variable<String>(templateId);
     }
@@ -552,6 +581,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
       binge: Value(binge),
       measures: Value(measures),
       situationAfter: Value(situationAfter),
+      running: Value(running),
       templateId: templateId == null && nullToAbsent
           ? const Value.absent()
           : Value(templateId),
@@ -587,6 +617,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
       binge: serializer.fromJson<bool>(json['binge']),
       measures: serializer.fromJson<String>(json['measures']),
       situationAfter: serializer.fromJson<String>(json['situationAfter']),
+      running: serializer.fromJson<bool>(json['running']),
       templateId: serializer.fromJson<String?>(json['templateId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -615,6 +646,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
       'binge': serializer.toJson<bool>(binge),
       'measures': serializer.toJson<String>(measures),
       'situationAfter': serializer.toJson<String>(situationAfter),
+      'running': serializer.toJson<bool>(running),
       'templateId': serializer.toJson<String?>(templateId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -637,6 +669,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
     bool? binge,
     String? measures,
     String? situationAfter,
+    bool? running,
     Value<String?> templateId = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -656,6 +689,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
     binge: binge ?? this.binge,
     measures: measures ?? this.measures,
     situationAfter: situationAfter ?? this.situationAfter,
+    running: running ?? this.running,
     templateId: templateId.present ? templateId.value : this.templateId,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -687,6 +721,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
       situationAfter: data.situationAfter.present
           ? data.situationAfter.value
           : this.situationAfter,
+      running: data.running.present ? data.running.value : this.running,
       templateId: data.templateId.present
           ? data.templateId.value
           : this.templateId,
@@ -713,6 +748,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
           ..write('binge: $binge, ')
           ..write('measures: $measures, ')
           ..write('situationAfter: $situationAfter, ')
+          ..write('running: $running, ')
           ..write('templateId: $templateId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -737,6 +773,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
     binge,
     measures,
     situationAfter,
+    running,
     templateId,
     createdAt,
     updatedAt,
@@ -760,6 +797,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
           other.binge == this.binge &&
           other.measures == this.measures &&
           other.situationAfter == this.situationAfter &&
+          other.running == this.running &&
           other.templateId == this.templateId &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
@@ -781,6 +819,7 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
   final Value<bool> binge;
   final Value<String> measures;
   final Value<String> situationAfter;
+  final Value<bool> running;
   final Value<String?> templateId;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -801,6 +840,7 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
     this.binge = const Value.absent(),
     this.measures = const Value.absent(),
     this.situationAfter = const Value.absent(),
+    this.running = const Value.absent(),
     this.templateId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -822,6 +862,7 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
     this.binge = const Value.absent(),
     this.measures = const Value.absent(),
     this.situationAfter = const Value.absent(),
+    this.running = const Value.absent(),
     this.templateId = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -849,6 +890,7 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
     Expression<bool>? binge,
     Expression<String>? measures,
     Expression<String>? situationAfter,
+    Expression<bool>? running,
     Expression<String>? templateId,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -870,6 +912,7 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
       if (binge != null) 'binge': binge,
       if (measures != null) 'measures': measures,
       if (situationAfter != null) 'situation_after': situationAfter,
+      if (running != null) 'running': running,
       if (templateId != null) 'template_id': templateId,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -893,6 +936,7 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
     Value<bool>? binge,
     Value<String>? measures,
     Value<String>? situationAfter,
+    Value<bool>? running,
     Value<String?>? templateId,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -914,6 +958,7 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
       binge: binge ?? this.binge,
       measures: measures ?? this.measures,
       situationAfter: situationAfter ?? this.situationAfter,
+      running: running ?? this.running,
       templateId: templateId ?? this.templateId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -971,6 +1016,9 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
     if (situationAfter.present) {
       map['situation_after'] = Variable<String>(situationAfter.value);
     }
+    if (running.present) {
+      map['running'] = Variable<bool>(running.value);
+    }
     if (templateId.present) {
       map['template_id'] = Variable<String>(templateId.value);
     }
@@ -1006,6 +1054,7 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
           ..write('binge: $binge, ')
           ..write('measures: $measures, ')
           ..write('situationAfter: $situationAfter, ')
+          ..write('running: $running, ')
           ..write('templateId: $templateId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -2019,6 +2068,7 @@ typedef $$MealEntriesTableCreateCompanionBuilder =
       Value<bool> binge,
       Value<String> measures,
       Value<String> situationAfter,
+      Value<bool> running,
       Value<String?> templateId,
       required DateTime createdAt,
       required DateTime updatedAt,
@@ -2041,6 +2091,7 @@ typedef $$MealEntriesTableUpdateCompanionBuilder =
       Value<bool> binge,
       Value<String> measures,
       Value<String> situationAfter,
+      Value<bool> running,
       Value<String?> templateId,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -2126,6 +2177,11 @@ class $$MealEntriesTableFilterComposer
 
   ColumnFilters<String> get situationAfter => $composableBuilder(
     column: $table.situationAfter,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get running => $composableBuilder(
+    column: $table.running,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2229,6 +2285,11 @@ class $$MealEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get running => $composableBuilder(
+    column: $table.running,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get templateId => $composableBuilder(
     column: $table.templateId,
     builder: (column) => ColumnOrderings(column),
@@ -2311,6 +2372,9 @@ class $$MealEntriesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get running =>
+      $composableBuilder(column: $table.running, builder: (column) => column);
+
   GeneratedColumn<String> get templateId => $composableBuilder(
     column: $table.templateId,
     builder: (column) => column,
@@ -2371,6 +2435,7 @@ class $$MealEntriesTableTableManager
                 Value<bool> binge = const Value.absent(),
                 Value<String> measures = const Value.absent(),
                 Value<String> situationAfter = const Value.absent(),
+                Value<bool> running = const Value.absent(),
                 Value<String?> templateId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -2391,6 +2456,7 @@ class $$MealEntriesTableTableManager
                 binge: binge,
                 measures: measures,
                 situationAfter: situationAfter,
+                running: running,
                 templateId: templateId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -2413,6 +2479,7 @@ class $$MealEntriesTableTableManager
                 Value<bool> binge = const Value.absent(),
                 Value<String> measures = const Value.absent(),
                 Value<String> situationAfter = const Value.absent(),
+                Value<bool> running = const Value.absent(),
                 Value<String?> templateId = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
@@ -2433,6 +2500,7 @@ class $$MealEntriesTableTableManager
                 binge: binge,
                 measures: measures,
                 situationAfter: situationAfter,
+                running: running,
                 templateId: templateId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,

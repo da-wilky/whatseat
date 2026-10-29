@@ -128,3 +128,6 @@ final daysWithEntriesProvider = StreamProvider.autoDispose.family<Set<String>, (
 
 final templatesProvider =
     StreamProvider.autoDispose<List<MealTemplate>>((ref) => ref.watch(databaseProvider).watchTemplates());
+
+final runningMealProvider =
+    StreamProvider.autoDispose<MealEntry?>((ref) => ref.watch(databaseProvider).watchRunning());
