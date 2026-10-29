@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/database.dart';
@@ -19,7 +22,18 @@ Future<String> loadOrCreateDbKey() async {
   return key;
 }
 
-final databaseProvider = Provider<AppDatabase>((ref) => throw UnimplementedError());
+/// Irreversible: deletes the (unreadable) database and its key.
+Future<void> resetDatabase() async {
+  // Same location drift_flutter uses for `driftDatabase(name: 'whatseat')`.
+  final dir = await getApplicationDocumentsDirectory();
+  for (final suffix in ['', '-wal', '-shm', '-journal']) {
+    final file = File(p.join(dir.path, 'whatseat.sqlite$suffix'));
+    if (await file.exists()) await file.delete();
+  }
+  await secureStorage.delete(key: 'db_key');
+}
+
+final databaseProvider =Provider<AppDatabase>((ref) => throw UnimplementedError());
 final prefsProvider = Provider<SharedPreferencesWithCache>((ref) => throw UnimplementedError());
 
 class AppSettings {
@@ -30,6 +44,7 @@ class AppSettings {
     required this.biometricEnabled,
     required this.lockTimeoutSeconds,
     required this.pinLength,
+    required this.customUnits,
   });
 
   /// Empty means: follow the system language.
@@ -39,6 +54,7 @@ class AppSettings {
   final bool biometricEnabled;
   final int lockTimeoutSeconds;
   final int pinLength;
+  final List<String> customUnits;
 
   Locale? get locale => localeCode.isEmpty ? null : Locale(localeCode);
 }
@@ -56,6 +72,7 @@ class SettingsNotifier extends Notifier<AppSettings> {
       biometricEnabled: p.getBool('biometricEnabled') ?? false,
       lockTimeoutSeconds: p.getInt('lockTimeout') ?? 60,
       pinLength: p.getInt('pinLength') ?? 4,
+      customUnits: p.getStringList('customUnits') ?? const [],
     );
   }
 
@@ -83,6 +100,12 @@ class SettingsNotifier extends Notifier<AppSettings> {
 
   Future<void> setBiometric(bool enabled) async {
     await _prefs.setBool('biometricEnabled', enabled);
+    ref.invalidateSelf();
+  }
+
+  Future<void> addUnit(String unit) async {
+    if (state.customUnits.contains(unit)) return;
+    await _prefs.setStringList('customUnits', [...state.customUnits, unit]);
     ref.invalidateSelf();
   }
 

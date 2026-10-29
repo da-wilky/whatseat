@@ -41,9 +41,13 @@ String timeRange(int start, int? end) => end == null ? formatMinutes(start) : '$
 
 DateTime dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
+/// Calendar days from [from] to [to]; via UTC because a local day across a DST switch is 23 or 25 hours.
+int daysBetween(DateTime from, DateTime to) =>
+    DateTime.utc(to.year, to.month, to.day).difference(DateTime.utc(from.year, from.month, from.day)).inDays;
+
 String relativeDayLabel(BuildContext context, DateTime day) {
   final l = AppLocalizations.of(context);
-  final diff = dateOnly(DateTime.now()).difference(day).inDays;
+  final diff = daysBetween(day, DateTime.now());
   if (diff == 0) return l.today;
   if (diff == 1) return l.yesterday;
   return DateFormat.MMMEd(Localizations.localeOf(context).toString()).format(day);

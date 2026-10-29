@@ -4,6 +4,10 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// build-apk.sh unpacks the keystore from Infisical here for the duration of the build only.
+val keystoreFile = rootProject.file("../build/tmp/whatseat.p12")
+val signingReady = keystoreFile.exists() && System.getenv("KEYSTORE_PASSWORD") != null
+
 android {
     namespace = "de.whatseat.whatseat"
     compileSdk = flutter.compileSdkVersion
@@ -30,6 +34,17 @@ android {
         manifestPlaceholders["appName"] = "WhatsEat"
     }
 
+    signingConfigs {
+        create("release") {
+            if (signingReady) {
+                storeFile = keystoreFile
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -37,9 +52,8 @@ android {
             manifestPlaceholders["appName"] = "WhatsEat Debug"
         }
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Without the keystore the APK stays unsigned and won't install, on purpose.
+            signingConfig = if (signingReady) signingConfigs.getByName("release") else null
         }
     }
 }

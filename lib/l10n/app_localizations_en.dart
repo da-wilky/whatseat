@@ -412,4 +412,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get quantityHint => 'Qty';
+
+  @override
+  String get newUnit => 'New unit …';
+
+  @override
+  String pinBlocked(int seconds) {
+    return 'Too many attempts – try again in $seconds s';
+  }
+
+  @override
+  String get pinConfirm => 'Confirm current PIN';
+
+  @override
+  String get recoveryTitle => 'Data can\'t be read';
+
+  @override
+  String get recoveryBody =>
+      'The encrypted data on this device can\'t be opened – usually because its key was lost from the device\'s secure storage. Without it the data can\'t be recovered.\n\nTry again first (e.g. after a restart). If that doesn\'t help, restore a backup or start fresh.';
+
+  @override
+  String get recoveryRetry => 'Try again';
+
+  @override
+  String get recoveryStartFresh => 'Start fresh';
+
+  @override
+  String get recoveryStartFreshConfirm =>
+      'The unreadable data will be deleted permanently.';
 }

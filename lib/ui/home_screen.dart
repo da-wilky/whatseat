@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -22,15 +24,48 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  final _today = dateOnly(DateTime.now());
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  DateTime _today = dateOnly(DateTime.now());
   final _pages = PageController(initialPage: _basePage);
   late DateTime _day = _today;
+  Timer? _midnight;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _scheduleMidnight();
+  }
+
+  // Timers don't fire while the app is suspended, hence also the check on resume.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _onDateMaybeChanged();
+  }
+
+  void _scheduleMidnight() {
+    _midnight?.cancel();
+    final now = DateTime.now();
+    final next = DateTime(now.year, now.month, now.day + 1);
+    _midnight = Timer(next.difference(now) + const Duration(seconds: 1), _onDateMaybeChanged);
+  }
+
+  void _onDateMaybeChanged() {
+    _scheduleMidnight();
+    final today = dateOnly(DateTime.now());
+    if (today == _today) return;
+    setState(() {
+      if (_day == _today) _day = today;
+      _today = today;
+    });
+    // Pages are numbered relative to today, so the current page must move with it.
+    _pages.jumpToPage(_basePage + daysBetween(today, _day));
+  }
 
   DateTime _dayForPage(int page) => DateTime(_today.year, _today.month, _today.day + page - _basePage);
 
   void _goTo(DateTime day) {
-    final page = _basePage + dateOnly(day).difference(_today).inDays;
+    final page = _basePage + daysBetween(_today, day);
     if ((page - _pages.page!.round()).abs() > 1) {
       _pages.jumpToPage(page);
     } else {
@@ -40,6 +75,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _midnight?.cancel();
     _pages.dispose();
     super.dispose();
   }
@@ -119,7 +156,7 @@ class _WeekStrip extends ConsumerWidget {
         children: [
           IconButton(
             icon: const Icon(Icons.chevron_left_rounded),
-            onPressed: () => onSelect(selected.subtract(const Duration(days: 7))),
+            onPressed: () => onSelect(DateTime(selected.year, selected.month, selected.day - 7)),
           ),
           for (final day in days)
             Expanded(
@@ -170,7 +207,7 @@ class _WeekStrip extends ConsumerWidget {
             ),
           IconButton(
             icon: const Icon(Icons.chevron_right_rounded),
-            onPressed: () => onSelect(selected.add(const Duration(days: 7))),
+            onPressed: () => onSelect(DateTime(selected.year, selected.month, selected.day + 7)),
           ),
         ],
       ),
@@ -178,16 +215,43 @@ class _WeekStrip extends ConsumerWidget {
   }
 }
 
-class _DayView extends ConsumerWidget {
+class _DayView extends ConsumerStatefulWidget {
   const _DayView({required this.day});
 
   final DateTime day;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DayView> createState() => _DayViewState();
+}
+
+class _DayViewState extends ConsumerState<_DayView> {
+  // A dismissed Dismissible must leave the tree at once, before the DB stream catches up.
+  final _dismissed = <String>{};
+
+  void _delete(MealEntry entry) {
     final l = AppLocalizations.of(context);
-    final key = dayKey(day);
-    final entries = ref.watch(dayEntriesProvider(key)).value;
+    final db = ref.read(databaseProvider);
+    setState(() => _dismissed.add(entry.id));
+    db.setEntryDeleted(entry.id, true);
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(
+        content: Text(l.entryDeleted),
+        action: SnackBarAction(
+          label: l.undo,
+          onPressed: () async {
+            await db.setEntryDeleted(entry.id, false);
+            if (mounted) setState(() => _dismissed.remove(entry.id));
+          },
+        ),
+      ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final key = dayKey(widget.day);
+    final entries = ref.watch(dayEntriesProvider(key)).value?.where((e) => !_dismissed.contains(e.id)).toList();
     final note = ref.watch(dayNoteProvider(key)).value;
     if (entries == null) return const SizedBox();
 
@@ -211,7 +275,7 @@ class _DayView extends ConsumerWidget {
             ),
           ),
         for (final entry in entries)
-          Padding(padding: const EdgeInsets.only(bottom: 10), child: _EntryCard(entry: entry)),
+          Padding(padding: const EdgeInsets.only(bottom: 10), child: _EntryCard(entry: entry, onDismissed: () => _delete(entry))),
       ],
     );
   }
@@ -363,13 +427,14 @@ class _DayNoteSheetState extends ConsumerState<_DayNoteSheet> {
   }
 }
 
-class _EntryCard extends ConsumerWidget {
-  const _EntryCard({required this.entry});
+class _EntryCard extends StatelessWidget {
+  const _EntryCard({required this.entry, required this.onDismissed});
 
   final MealEntry entry;
+  final VoidCallback onDismissed;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -400,16 +465,7 @@ class _EntryCard extends ConsumerWidget {
         decoration: BoxDecoration(color: scheme.errorContainer, borderRadius: BorderRadius.circular(20)),
         child: Icon(Icons.delete_outline, color: scheme.onErrorContainer),
       ),
-      onDismissed: (_) {
-        final db = ref.read(databaseProvider);
-        db.setEntryDeleted(entry.id, true);
-        ScaffoldMessenger.of(context)
-          ..clearSnackBars()
-          ..showSnackBar(SnackBar(
-            content: Text(l.entryDeleted),
-            action: SnackBarAction(label: l.undo, onPressed: () => db.setEntryDeleted(entry.id, false)),
-          ));
-      },
+      onDismissed: (_) => onDismissed(),
       child: Card(
         clipBehavior: Clip.antiAlias,
         child: InkWell(

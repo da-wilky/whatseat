@@ -31,7 +31,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
 
   void _setLastDays(int days) {
     final today = dateOnly(DateTime.now());
-    setState(() => _range = DateTimeRange(start: today.subtract(Duration(days: days - 1)), end: today));
+    setState(() => _range = DateTimeRange(start: DateTime(today.year, today.month, today.day - days + 1), end: today));
   }
 
   Future<List<ProtocolDay>> _load() => loadProtocol(ref.read(databaseProvider), _range.start, _range.end);

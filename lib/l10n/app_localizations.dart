@@ -859,6 +859,54 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Anz.'**
   String get quantityHint;
+
+  /// No description provided for @newUnit.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Einheit …'**
+  String get newUnit;
+
+  /// No description provided for @pinBlocked.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu viele Versuche – erneut in {seconds} s'**
+  String pinBlocked(int seconds);
+
+  /// No description provided for @pinConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktuelle PIN bestätigen'**
+  String get pinConfirm;
+
+  /// No description provided for @recoveryTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Daten nicht lesbar'**
+  String get recoveryTitle;
+
+  /// No description provided for @recoveryBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Die verschlüsselten Daten auf diesem Gerät lassen sich nicht öffnen – meist, weil der Schlüssel im sicheren Speicher des Geräts verloren gegangen ist. Ohne ihn sind die Daten nicht wiederherstellbar.\n\nVersuche es zuerst erneut (z. B. nach einem Neustart). Hilft das nicht, kannst du ein Backup einspielen oder neu beginnen.'**
+  String get recoveryBody;
+
+  /// No description provided for @recoveryRetry.
+  ///
+  /// In de, this message translates to:
+  /// **'Erneut versuchen'**
+  String get recoveryRetry;
+
+  /// No description provided for @recoveryStartFresh.
+  ///
+  /// In de, this message translates to:
+  /// **'Neu beginnen'**
+  String get recoveryStartFresh;
+
+  /// No description provided for @recoveryStartFreshConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Die unlesbaren Daten werden endgültig gelöscht.'**
+  String get recoveryStartFreshConfirm;
 }
 
 class _AppLocalizationsDelegate

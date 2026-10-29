@@ -7,6 +7,7 @@ import 'package:whatseat/data/database.dart';
 import 'package:whatseat/data/models.dart';
 import 'package:whatseat/export/protocol_export.dart';
 import 'package:whatseat/l10n/app_localizations.dart';
+import 'package:whatseat/ui/common.dart';
 
 MealEntriesCompanion _entry(String day, int start, List<FoodItem> items, {String? templateId, bool binge = false}) =>
     MealEntriesCompanion.insert(
@@ -29,6 +30,11 @@ void main() {
 
   setUp(() => db = AppDatabase.forTesting(NativeDatabase.memory()));
   tearDown(() => db.close());
+
+  test('day differences ignore DST switches', () {
+    expect(daysBetween(DateTime(2026, 3, 28), DateTime(2026, 3, 30)), 2);
+    expect(daysBetween(DateTime(2026, 10, 26), DateTime(2026, 10, 24)), -2);
+  });
 
   test('legacy amount strings are parsed', () {
     final item = FoodItem.fromJson(const {'amount': '1,5 Scheiben', 'food': 'Brot'});
@@ -77,6 +83,7 @@ void main() {
     expect(csv, contains('"Nudeln; gekocht"'));
     expect(csv, contains('Krank'));
     expect(csv, contains('1,5 Portionen'));
+    expect(days.single.entries.single.items.single.unit, 'Portion');
     final pdf = await buildProtocolPdf(l, days, 'Test');
     expect(String.fromCharCodes(pdf.take(4)), '%PDF');
   });

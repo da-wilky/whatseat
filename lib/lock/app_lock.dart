@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -8,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers.dart';
@@ -33,6 +35,11 @@ Future<bool> verifyPin(String pin) async {
   final hash = await secureStorage.read(key: 'pin_hash');
   if (salt == null || hash == null) return false;
   return await _hash(pin, base64Decode(salt)) == hash;
+}
+
+Future<void> clearPin() async {
+  await secureStorage.delete(key: 'pin_salt');
+  await secureStorage.delete(key: 'pin_hash');
 }
 
 Future<bool> biometricsAvailable() async {
@@ -80,6 +87,7 @@ class _AppLockGateState extends ConsumerState<AppLockGate> with WidgetsBindingOb
   late bool _locked = ref.read(settingsProvider).lockEnabled;
   bool _obscured = false;
   DateTime? _leftAt;
+  bool _leftForFlow = false;
 
   @override
   void initState() {
@@ -95,27 +103,33 @@ class _AppLockGateState extends ConsumerState<AppLockGate> with WidgetsBindingOb
   }
 
   Future<void> _applySecureWindow(bool secure) async {
-    if (!Platform.isAndroid) return;
+    if (!Platform.isAndroid && !Platform.isIOS) return;
     await _windowChannel.invokeMethod('setSecure', secure);
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final settings = ref.read(settingsProvider);
-    if (!settings.lockEnabled || _suspended > 0) return;
+    if (!settings.lockEnabled) return;
     switch (state) {
       case AppLifecycleState.inactive:
-        setState(() => _obscured = true);
+        if (_suspended == 0) setState(() => _obscured = true);
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
-        _leftAt ??= DateTime.now();
-        setState(() => _obscured = true);
+        if (_leftAt == null) {
+          _leftAt = DateTime.now();
+          _leftForFlow = _suspended > 0;
+        }
+        if (_suspended == 0) setState(() => _obscured = true);
       case AppLifecycleState.resumed:
         final leftAt = _leftAt;
         _leftAt = null;
+        // Trips to the share sheet or file picker get a grace period instead of locking on return,
+        // but staying away longer still locks.
+        final timeout = _leftForFlow ? max(settings.lockTimeoutSeconds, 300) : settings.lockTimeoutSeconds;
         setState(() {
           _obscured = false;
-          if (leftAt != null && DateTime.now().difference(leftAt).inSeconds >= settings.lockTimeoutSeconds) {
+          if (leftAt != null && DateTime.now().difference(leftAt).inSeconds >= timeout) {
             _locked = true;
           }
         });
@@ -130,7 +144,8 @@ class _AppLockGateState extends ConsumerState<AppLockGate> with WidgetsBindingOb
     return Stack(
       fit: StackFit.expand,
       children: [
-        Offstage(offstage: _locked, child: widget.child),
+        // ExcludeFocus: a hardware keyboard could otherwise still type into a hidden text field.
+        ExcludeFocus(excluding: _locked, child: Offstage(offstage: _locked, child: widget.child)),
         if (_locked)
           LockScreen(onUnlocked: () => setState(() => _locked = false))
         else if (_obscured)
@@ -146,10 +161,28 @@ class _AppLockGateState extends ConsumerState<AppLockGate> with WidgetsBindingOb
   }
 }
 
+/// Asks for the current PIN (or biometrics) before security settings change.
+Future<bool> confirmPin(BuildContext context) async {
+  final ok = await Navigator.push<bool>(
+    context,
+    MaterialPageRoute(
+      builder: (context) => Scaffold(
+        appBar: AppBar(),
+        body: LockScreen(
+          title: AppLocalizations.of(context).pinConfirm,
+          onUnlocked: () => Navigator.pop(context, true),
+        ),
+      ),
+    ),
+  );
+  return ok ?? false;
+}
+
 class LockScreen extends ConsumerStatefulWidget {
-  const LockScreen({super.key, required this.onUnlocked});
+  const LockScreen({super.key, required this.onUnlocked, this.title});
 
   final VoidCallback onUnlocked;
+  final String? title;
 
   @override
   ConsumerState<LockScreen> createState() => _LockScreenState();
@@ -159,30 +192,72 @@ class _LockScreenState extends ConsumerState<LockScreen> {
   String _pin = '';
   bool _error = false;
   bool _checking = false;
+  Timer? _countdown;
+
+  SharedPreferencesWithCache get _prefs => ref.read(prefsProvider);
+
+  // Persisted, so killing the app doesn't reset the throttle.
+  int get _remainingBlock {
+    final until = _prefs.getInt('pinBlockedUntil') ?? 0;
+    return ((until - DateTime.now().millisecondsSinceEpoch) / 1000).ceil();
+  }
 
   @override
   void initState() {
     super.initState();
+    _startCountdown();
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryBiometric());
+  }
+
+  @override
+  void dispose() {
+    _countdown?.cancel();
+    super.dispose();
+  }
+
+  void _startCountdown() {
+    if (_remainingBlock <= 0) return;
+    _countdown?.cancel();
+    _countdown = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (_remainingBlock <= 0) t.cancel();
+      setState(() {});
+    });
+  }
+
+  Future<void> _registerFailure() async {
+    final failures = (_prefs.getInt('pinFailures') ?? 0) + 1;
+    await _prefs.setInt('pinFailures', failures);
+    if (failures >= 5) {
+      final seconds = min(30 * pow(2, failures - 5).toInt(), 3600);
+      await _prefs.setInt('pinBlockedUntil', DateTime.now().millisecondsSinceEpoch + seconds * 1000);
+      _startCountdown();
+    }
+  }
+
+  Future<void> _unlock() async {
+    await _prefs.setInt('pinFailures', 0);
+    widget.onUnlocked();
   }
 
   Future<void> _tryBiometric() async {
     if (!ref.read(settingsProvider).biometricEnabled || !mounted) return;
-    if (await authenticateBiometric(AppLocalizations.of(context).unlockReason)) widget.onUnlocked();
+    if (await authenticateBiometric(AppLocalizations.of(context).unlockReason)) await _unlock();
   }
 
   Future<void> _onChanged(String pin) async {
+    if (_remainingBlock > 0 || _checking) return;
     setState(() {
       _pin = pin;
       _error = false;
     });
-    if (pin.length < ref.read(settingsProvider).pinLength || _checking) return;
+    if (pin.length < ref.read(settingsProvider).pinLength) return;
     _checking = true;
     final ok = await verifyPin(pin);
     _checking = false;
     if (ok) {
-      widget.onUnlocked();
+      await _unlock();
     } else {
+      await _registerFailure();
       HapticFeedback.heavyImpact();
       setState(() {
         _pin = '';
@@ -195,13 +270,14 @@ class _LockScreenState extends ConsumerState<LockScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final settings = ref.watch(settingsProvider);
+    final blocked = _remainingBlock;
     return Material(
       color: Theme.of(context).colorScheme.surface,
       child: SafeArea(
         child: PinPad(
-          title: l.lockTitle,
-          subtitle: _error ? l.pinWrong : l.pinEnter,
-          isError: _error,
+          title: widget.title ?? l.lockTitle,
+          subtitle: blocked > 0 ? l.pinBlocked(blocked) : (_error ? l.pinWrong : l.pinEnter),
+          isError: _error || blocked > 0,
           pin: _pin,
           maxLength: settings.pinLength,
           onChanged: _onChanged,

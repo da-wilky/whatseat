@@ -416,4 +416,32 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get quantityHint => 'Anz.';
+
+  @override
+  String get newUnit => 'Neue Einheit …';
+
+  @override
+  String pinBlocked(int seconds) {
+    return 'Zu viele Versuche – erneut in $seconds s';
+  }
+
+  @override
+  String get pinConfirm => 'Aktuelle PIN bestätigen';
+
+  @override
+  String get recoveryTitle => 'Daten nicht lesbar';
+
+  @override
+  String get recoveryBody =>
+      'Die verschlüsselten Daten auf diesem Gerät lassen sich nicht öffnen – meist, weil der Schlüssel im sicheren Speicher des Geräts verloren gegangen ist. Ohne ihn sind die Daten nicht wiederherstellbar.\n\nVersuche es zuerst erneut (z. B. nach einem Neustart). Hilft das nicht, kannst du ein Backup einspielen oder neu beginnen.';
+
+  @override
+  String get recoveryRetry => 'Erneut versuchen';
+
+  @override
+  String get recoveryStartFresh => 'Neu beginnen';
+
+  @override
+  String get recoveryStartFreshConfirm =>
+      'Die unlesbaren Daten werden endgültig gelöscht.';
 }

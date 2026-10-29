@@ -161,5 +161,20 @@
   "colSituationAfter": "Situation nach dem Essen, Gedanken, Gefühle",
   "unitDefs": "Stück/Stück|Scheibe/Scheiben|Portion/Portionen|Tasse/Tassen|Glas/Gläser|Becher/Becher|Schüssel/Schüsseln|Teller/Teller|EL/EL|TL/TL|Handvoll/Handvoll|Riegel/Riegel|Flasche/Flaschen|g/g|ml/ml",
   "unit": "Einheit",
-  "quantityHint": "Anz."
+  "quantityHint": "Anz.",
+  "newUnit": "Neue Einheit …",
+  "pinBlocked": "Zu viele Versuche – erneut in {seconds} s",
+  "@pinBlocked": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "pinConfirm": "Aktuelle PIN bestätigen",
+  "recoveryTitle": "Daten nicht lesbar",
+  "recoveryBody": "Die verschlüsselten Daten auf diesem Gerät lassen sich nicht öffnen – meist, weil der Schlüssel im sicheren Speicher des Geräts verloren gegangen ist. Ohne ihn sind die Daten nicht wiederherstellbar.\n\nVersuche es zuerst erneut (z. B. nach einem Neustart). Hilft das nicht, kannst du ein Backup einspielen oder neu beginnen.",
+  "recoveryRetry": "Erneut versuchen",
+  "recoveryStartFresh": "Neu beginnen",
+  "recoveryStartFreshConfirm": "Die unlesbaren Daten werden endgültig gelöscht."
 }

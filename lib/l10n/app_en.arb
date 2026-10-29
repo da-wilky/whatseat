@@ -126,5 +126,13 @@
   "colSituationAfter": "Situation after eating, thoughts, feelings",
   "unitDefs": "piece/pieces|slice/slices|serving/servings|cup/cups|glass/glasses|tub/tubs|bowl/bowls|plate/plates|tbsp/tbsp|tsp/tsp|handful/handfuls|bar/bars|bottle/bottles|g/g|ml/ml",
   "unit": "Unit",
-  "quantityHint": "Qty"
+  "quantityHint": "Qty",
+  "newUnit": "New unit …",
+  "pinBlocked": "Too many attempts – try again in {seconds} s",
+  "pinConfirm": "Confirm current PIN",
+  "recoveryTitle": "Data can't be read",
+  "recoveryBody": "The encrypted data on this device can't be opened – usually because its key was lost from the device's secure storage. Without it the data can't be recovered.\n\nTry again first (e.g. after a restart). If that doesn't help, restore a backup or start fresh.",
+  "recoveryRetry": "Try again",
+  "recoveryStartFresh": "Start fresh",
+  "recoveryStartFreshConfirm": "The unreadable data will be deleted permanently."
 }

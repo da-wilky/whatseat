@@ -170,7 +170,10 @@ String buildProtocolCsv(AppLocalizations l, List<ProtocolDay> days) {
       l.dayNote,
     ],
     for (final day in days)
-      for (final e in day.entries)
+      if (day.entries.isEmpty)
+        [dayKey(day.day), for (var i = 0; i < 13; i++) '', _noteText(l, day.note)]
+      else
+        for (final e in day.entries)
         [
           e.day,
           mealLabel(l, e.meal),

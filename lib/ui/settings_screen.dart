@@ -56,7 +56,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _toggleLock(bool enable) async {
     if (!enable) {
+      if (!await confirmPin(context)) return;
       await _settings.disableLock();
+      await clearPin();
       return;
     }
     final length = await Navigator.push<int>(context, MaterialPageRoute(builder: (_) => const PinSetupScreen()));
@@ -159,6 +161,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               leading: const Icon(Icons.pin_outlined),
               title: Text(l.pinChange),
               onTap: () async {
+                if (!await confirmPin(context) || !context.mounted) return;
                 final length =
                     await Navigator.push<int>(context, MaterialPageRoute(builder: (_) => const PinSetupScreen()));
                 if (length != null) await _settings.enableLock(length);

@@ -142,7 +142,7 @@ Future<void> openEntryEditor(BuildContext context, EntryDraft draft) => Navigato
     );
 
 class _ItemRow {
-  _ItemRow(FoodItem item, String quantityText)
+  _ItemRow(FoodItem item, String quantityText, {required this.touched})
       : quantity = TextEditingController(text: quantityText),
         unit = TextEditingController(text: item.unit),
         food = TextEditingController(text: item.food);
@@ -151,6 +151,9 @@ class _ItemRow {
   final TextEditingController unit;
   final TextEditingController food;
   final foodFocus = FocusNode();
+
+  /// Untouched rows still hold the default amount and take over the last amount of a picked food.
+  bool touched;
 
   void dispose() {
     quantity.dispose();
@@ -174,7 +177,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
   late final _quantityFormat = NumberFormat('#.##', AppLocalizations.of(context).localeName);
   late final List<_ItemRow> _rows = [
     for (final item in _d.items) _row(item),
-    if (_d.items.isEmpty) _row(const FoodItem(food: '')),
+    if (_d.items.isEmpty) _newRow(),
   ];
   late final _appetiteFor = TextEditingController(text: _d.appetiteFor);
   late final _before = TextEditingController(text: _d.situationBefore);
@@ -217,21 +220,42 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
     super.dispose();
   }
 
-  _ItemRow _row(FoodItem item) => _ItemRow(item, _formatQuantity(item.quantity));
+  _ItemRow _row(FoodItem item) => _ItemRow(item, _formatQuantity(item.quantity), touched: true);
+
+  _ItemRow _newRow() => _ItemRow(
+        FoodItem(quantity: 1, unit: defaultUnits(AppLocalizations.of(context)).first, food: ''),
+        _formatQuantity(1),
+        touched: false,
+      );
 
   String _formatQuantity(double? q) => q == null ? '' : _quantityFormat.format(q);
-
-  void _step(_ItemRow row, int direction) {
-    final q = parseQuantity(row.quantity.text) ?? 0;
-    final step = (direction < 0 ? q <= 1 : q < 1) ? 0.5 : 1.0;
-    final next = q + direction * step;
-    _change(() => row.quantity.text = next <= 0 ? '' : _formatQuantity(next));
-  }
 
   void _change(VoidCallback fn) => setState(() {
         fn();
         _dirty = true;
       });
+
+  /// Text fields change without setState; PopScope only sees the flag after a rebuild.
+  void _markDirty() {
+    if (!_dirty) setState(() => _dirty = true);
+  }
+
+  Future<void> _addUnit(_ItemRow row) async {
+    final l = AppLocalizations.of(context);
+    final unit = (await showTextDialog(context, title: l.newUnit, label: l.unit))?.trim() ?? '';
+    if (unit.isEmpty) return;
+    await ref.read(settingsProvider.notifier).addUnit(unit);
+    _change(() {
+      row.unit.text = unit;
+      row.touched = true;
+    });
+  }
+
+  void _removeRow(_ItemRow row) {
+    _change(() => _rows.remove(row));
+    // Its text fields still reference the controllers until this frame unmounts them.
+    WidgetsBinding.instance.addPostFrameCallback((_) => row.dispose());
+  }
 
   List<FoodItem> _collectItems() => [
         for (final r in _rows)
@@ -306,88 +330,82 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
   }
 
   void _addRow() {
-    final row = _row(const FoodItem(food: ''));
+    final row = _newRow();
     setState(() => _rows.add(row));
     WidgetsBinding.instance.addPostFrameCallback((_) => row.foodFocus.requestFocus());
   }
 
   Widget _itemRow(AppLocalizations l, int index, _ItemRow row) {
-    final units = {..._unitHistory, ...defaultUnits(l)};
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(children: [
-          Expanded(
-            child: _SuggestField<FoodSuggestion>(
-              controller: row.food,
-              focusNode: row.foodFocus,
-              hint: l.foodHint,
-              autofocus: index == 0 && _d.id == null && _d.items.isEmpty,
-              options: (q) => q.isEmpty
-                  ? _foods.take(6).toList()
-                  : _foods.where((f) => f.food.toLowerCase().contains(q.toLowerCase())).take(8).toList(),
-              display: (f) => f.food,
-              subtitle: (f) {
-                final amount = formatAmount(l, f.last);
-                return amount.isEmpty ? null : l.lastAmount(amount);
-              },
-              onSelected: (f) {
-                if (row.quantity.text.trim().isNotEmpty || row.unit.text.trim().isNotEmpty) return;
-                _change(() {
-                  row.quantity.text = _formatQuantity(f.last.quantity);
-                  row.unit.text = f.last.unit;
-                });
-              },
-              onChanged: () => _dirty = true,
-            ),
-          ),
-          if (_rows.length > 1)
-            IconButton(
-              icon: const Icon(Icons.close_rounded),
-              onPressed: () => _change(() => _rows.removeAt(index).dispose()),
-            ),
-        ]),
-        const SizedBox(height: 8),
-        Row(children: [
-          IconButton.filledTonal(
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.remove_rounded),
-            onPressed: () => _step(row, -1),
-          ),
-          SizedBox(
-            width: 64,
-            child: TextField(
-              controller: row.quantity,
-              textAlign: TextAlign.center,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
-              onChanged: (_) => _dirty = true,
-              decoration: InputDecoration(hintText: l.quantityHint, contentPadding: const EdgeInsets.symmetric(vertical: 12)),
-            ),
-          ),
-          IconButton.filledTonal(
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.add_rounded),
-            onPressed: () => _step(row, 1),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            // Editable: typing a unit that isn't listed adds it; it shows up in later entries via unitHistory.
-            child: DropdownMenu<String>(
-              controller: row.unit,
-              hintText: l.unit,
-              expandedInsets: EdgeInsets.zero,
-              enableFilter: true,
-              requestFocusOnTap: true,
-              menuHeight: 280,
-              onSelected: (_) => _dirty = true,
-              dropdownMenuEntries: [for (final u in units) DropdownMenuEntry(value: u, label: u)],
-            ),
-          ),
-        ]),
-      ],
-    );
+    final units = {
+      ...defaultUnits(l),
+      ...ref.watch(settingsProvider.select((s) => s.customUnits)),
+      ..._unitHistory,
+      if (row.unit.text.isNotEmpty) row.unit.text,
+    };
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SizedBox(
+        width: 52,
+        child: TextField(
+          controller: row.quantity,
+          textAlign: TextAlign.center,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
+          onTap: () => row.quantity.selection = TextSelection(baseOffset: 0, extentOffset: row.quantity.text.length),
+          onChanged: (_) {
+            row.touched = true;
+            _markDirty();
+          },
+          decoration: InputDecoration(hintText: l.quantityHint, contentPadding: const EdgeInsets.symmetric(vertical: 12)),
+        ),
+      ),
+      const SizedBox(width: 6),
+      SizedBox(
+        width: 100,
+        child: _UnitPicker(
+          unit: row.unit.text,
+          units: units.toList(),
+          newUnitLabel: l.newUnit,
+          onSelected: (unit) => _change(() {
+            row.unit.text = unit;
+            row.touched = true;
+          }),
+          onAdd: () => _addUnit(row),
+        ),
+      ),
+      const SizedBox(width: 6),
+      Expanded(
+        child: _SuggestField<FoodSuggestion>(
+          controller: row.food,
+          focusNode: row.foodFocus,
+          hint: l.foodHint,
+          autofocus: index == 0 && _d.id == null && _d.items.isEmpty,
+          options: (q) => q.isEmpty
+              ? _foods.take(6).toList()
+              : _foods.where((f) => f.food.toLowerCase().contains(q.toLowerCase())).take(8).toList(),
+          display: (f) => f.food,
+          subtitle: (f) {
+            final amount = formatAmount(l, f.last);
+            return amount.isEmpty ? null : l.lastAmount(amount);
+          },
+          onSelected: (f) {
+            if (row.touched) return;
+            _change(() {
+              row.quantity.text = _formatQuantity(f.last.quantity);
+              row.unit.text = f.last.unit;
+            });
+          },
+          onChanged: _markDirty,
+        ),
+      ),
+      if (_rows.length > 1)
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.close_rounded),
+          onPressed: () => _removeRow(row),
+        ),
+    ]);
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -466,7 +484,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
             SectionCard(title: l.sectionFood, icon: Icons.restaurant_rounded, children: [
               for (final (i, row) in _rows.indexed) ...[
                 if (i > 0) const Divider(height: 24),
-                _itemRow(l, i, row),
+                KeyedSubtree(key: ObjectKey(row), child: _itemRow(l, i, row)),
               ],
               const SizedBox(height: 4),
               Align(
@@ -488,13 +506,13 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
               gap,
               TextField(
                 controller: _appetiteFor,
-                onChanged: (_) => _dirty = true,
+                onChanged: (_) => _markDirty(),
                 decoration: InputDecoration(labelText: l.appetiteFor),
               ),
               gap,
               TextField(
                 controller: _before,
-                onChanged: (_) => _dirty = true,
+                onChanged: (_) => _markDirty(),
                 minLines: 2,
                 maxLines: 6,
                 decoration: InputDecoration(labelText: l.situationBefore, alignLabelWithHint: true),
@@ -506,7 +524,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
               gap,
               TextField(
                 controller: _after,
-                onChanged: (_) => _dirty = true,
+                onChanged: (_) => _markDirty(),
                 minLines: 2,
                 maxLines: 6,
                 decoration: InputDecoration(labelText: l.situationAfter, alignLabelWithHint: true),
@@ -738,6 +756,57 @@ class TagPicker extends StatelessWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+class _UnitPicker extends StatelessWidget {
+  const _UnitPicker({
+    required this.unit,
+    required this.units,
+    required this.newUnitLabel,
+    required this.onSelected,
+    required this.onAdd,
+  });
+
+  static const _addSentinel = '\u0000add';
+
+  final String unit;
+  final List<String> units;
+  final String newUnitLabel;
+  final ValueChanged<String> onSelected;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return PopupMenuButton<String>(
+      tooltip: '',
+      initialValue: unit,
+      position: PopupMenuPosition.under,
+      constraints: const BoxConstraints(maxHeight: 360, minWidth: 160),
+      onSelected: (v) => v == _addSentinel ? onAdd() : onSelected(v),
+      itemBuilder: (_) => [
+        for (final u in units) PopupMenuItem(value: u, height: 40, child: Text(u)),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: _addSentinel,
+          height: 44,
+          child: Row(children: [
+            Icon(Icons.add_rounded, size: 18, color: theme.colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(newUnitLabel, style: TextStyle(color: theme.colorScheme.primary)),
+          ]),
+        ),
+      ],
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          contentPadding: EdgeInsets.fromLTRB(12, 12, 4, 12),
+          suffixIcon: Icon(Icons.arrow_drop_down_rounded),
+          suffixIconConstraints: BoxConstraints(minWidth: 28),
+        ),
+        child: Text(unit, maxLines: 1, overflow: TextOverflow.ellipsis),
+      ),
     );
   }
 }
