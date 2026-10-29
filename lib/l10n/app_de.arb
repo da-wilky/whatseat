@@ -1,0 +1,165 @@
+{
+  "@@locale": "de",
+  "appTitle": "WhatsEat",
+  "today": "Heute",
+  "yesterday": "Gestern",
+  "pickDate": "Datum wählen",
+  "export": "Exportieren",
+  "templates": "Vorlagen",
+  "settings": "Einstellungen",
+  "addEntry": "Eintrag",
+  "newEntry": "Neuer Eintrag",
+  "editEntry": "Eintrag bearbeiten",
+  "eatAgain": "Wieder essen",
+  "reuseHint": "Gespeicherte Vorlagen und zuletzt gegessene Mahlzeiten erscheinen hier, damit du sie mit einem Tipp erneut eintragen kannst.",
+  "emptyDay": "Noch nichts eingetragen",
+  "emptyDayHint": "Trage alles ein, was du isst und trinkst – am besten direkt nach dem Essen.",
+  "statMeals": "Einträge",
+  "statHunger": "Ø Hunger",
+  "statSatiety": "Ø Satt",
+  "statBinges": "Essanfälle",
+  "statMeasures": "Maßnahmen",
+  "dayNote": "Tagesnotiz",
+  "dayNoteAdd": "Tagesnotiz hinzufügen",
+  "dayNoteHint": "z. B. Diät oder Krankheit an diesem Tag",
+  "noteDiet": "Diät",
+  "noteSick": "Krank",
+  "entryDeleted": "Eintrag gelöscht",
+  "undo": "Rückgängig",
+  "save": "Speichern",
+  "cancel": "Abbrechen",
+  "ok": "OK",
+  "delete": "Löschen",
+  "rename": "Umbenennen",
+  "pin": "Anheften",
+  "other": "Andere …",
+  "yes": "ja",
+  "no": "nein",
+  "notSet": "nicht angegeben",
+  "deleteEntryQuestion": "Eintrag löschen?",
+  "discardQuestion": "Änderungen verwerfen?",
+  "discard": "Verwerfen",
+  "keepEditing": "Weiter bearbeiten",
+  "saveAsTemplate": "Als Vorlage speichern",
+  "templateName": "Name der Vorlage",
+  "templateSaved": "Vorlage gespeichert",
+  "templateDeleted": "Vorlage gelöscht",
+  "templatesEmpty": "Noch keine Vorlagen.\nIm Eintrag über ⋮ → „Als Vorlage speichern“ anlegen. Beim Verwenden übernimmt die Vorlage automatisch deine letzten Angaben.",
+  "fromTemplateHint": "Aus Vorlage – beim Speichern wird die Vorlage mit diesen Angaben aktualisiert.",
+  "needOneItem": "Bitte mindestens ein Lebensmittel oder Getränk eintragen.",
+  "sectionMeal": "Mahlzeit",
+  "mealBreakfast": "Frühstück",
+  "mealLunch": "Mittagessen",
+  "mealDinner": "Abendessen",
+  "mealSnack": "Snack",
+  "timeFrom": "von",
+  "timeTo": "bis",
+  "timeToAdd": "bis …",
+  "sectionFood": "Lebensmittel / Getränke",
+  "amount": "Menge",
+  "foodHint": "z. B. Vollkornbrot",
+  "addItem": "Weiteres hinzufügen",
+  "lastAmount": "zuletzt: {amount}",
+  "@lastAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "withWhom": "Mit wem",
+  "withWhomDefaults": "allein|Familie|Partner:in|Freunde|Kolleg:innen",
+  "sectionBefore": "Vor dem Essen",
+  "hunger": "Hunger",
+  "appetiteFor": "Appetit auf",
+  "situationBefore": "Situation, Gedanken, Gefühle",
+  "sectionAfter": "Nach dem Essen",
+  "satiety": "Satt",
+  "situationAfter": "Situation, Gedanken, Gefühle",
+  "sectionBehaviour": "Essanfall & Maßnahmen",
+  "binge": "Essanfall",
+  "bingeHint": "Kontrollverlust beim Essen",
+  "measures": "Gewichtsregulierende Maßnahmen",
+  "measureDefaults": "Sport|Erbrechen|Abführmittel",
+  "general": "Allgemein",
+  "patientName": "Name",
+  "patientNameHint": "Erscheint im PDF-Protokoll",
+  "language": "Sprache",
+  "languageSystem": "Systemsprache",
+  "security": "Sicherheit",
+  "appLock": "App-Sperre",
+  "appLockHint": "PIN beim Öffnen; blockiert Screenshots",
+  "biometric": "Fingerabdruck / Face ID",
+  "biometricConfirm": "Biometrisches Entsperren bestätigen",
+  "lockTimeout": "Sperren nach",
+  "lockImmediately": "Sofort",
+  "lockAfterMinutes": "{minutes, plural, =1{1 Minute} other{{minutes} Minuten}}",
+  "@lockAfterMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "pinChange": "PIN ändern",
+  "encryptionInfo": "Alle Daten werden verschlüsselt auf diesem Gerät gespeichert.",
+  "lockTitle": "WhatsEat ist gesperrt",
+  "unlockReason": "WhatsEat entsperren",
+  "pinEnter": "PIN eingeben",
+  "pinWrong": "Falsche PIN",
+  "pinChoose": "PIN festlegen",
+  "pinRepeat": "PIN wiederholen",
+  "pinLengthHint": "4–6 Ziffern, dann ✓",
+  "pinMismatch": "PINs stimmen nicht überein – bitte erneut",
+  "data": "Daten",
+  "backupCreate": "Backup erstellen",
+  "backupWarning": "Die Backup-Datei ist nicht verschlüsselt",
+  "backupRestore": "Backup wiederherstellen",
+  "backupRestoreHint": "Wird mit vorhandenen Daten zusammengeführt",
+  "backupImported": "{count} Datensätze übernommen",
+  "@backupImported": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "backupInvalid": "Backup konnte nicht gelesen werden: {error}",
+  "@backupInvalid": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "exportRange": "Zeitraum",
+  "lastDays": "Letzte {days} Tage",
+  "@lastDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "customRange": "Zeitraum wählen",
+  "exportPdf": "PDF-Protokoll ansehen & teilen",
+  "exportPdfHint": "Eine Seite pro Tag, im Format des Essprotokolls.",
+  "exportCsv": "Als CSV teilen",
+  "protocolTitle": "Essprotokoll",
+  "pdfName": "Name",
+  "pdfDate": "Datum",
+  "colMeal": "Mahlzeit\nvon … bis …",
+  "colMealType": "Mahlzeit",
+  "colWithWhom": "Mit wem",
+  "colSituationBefore": "Situation vor dem Essen, Gedanken, Gefühle, Appetit auf",
+  "colHunger": "Hunger (in %)",
+  "colAmount": "Menge",
+  "colFood": "Lebensmittel/ Getränk",
+  "colSatiety": "Satt (in %)",
+  "colBinge": "Essanfall (ja/nein)",
+  "colMeasures": "Gewichtsregulierende Maßnahmen (z. B. Sport, Erbrechen, Abführmittel)",
+  "colSituationAfter": "Situation nach dem Essen, Gedanken, Gefühle",
+  "unitDefs": "Stück/Stück|Scheibe/Scheiben|Portion/Portionen|Tasse/Tassen|Glas/Gläser|Becher/Becher|Schüssel/Schüsseln|Teller/Teller|EL/EL|TL/TL|Handvoll/Handvoll|Riegel/Riegel|Flasche/Flaschen|g/g|ml/ml",
+  "unit": "Einheit",
+  "quantityHint": "Anz."
+}
