@@ -49,3 +49,24 @@ app.*.map.json
 
 # Licensed source material
 Therapie-Tools_Essprotokoll.pdf
+
+# direnv
+.direnv/
+.envrc
+
+# Secrets: release keystore (PKCS12) and env files
+*.p12
+*.keystore
+*.jks
+key.properties
+.env
+.env.*
+
+# Build outputs
+*.apk
+*.aab
+
+# Patient data pulled off a device: backups and protocol exports
+whatseat-backup-*.json
+essprotokoll_*.csv
+essprotokoll_*.pdf
