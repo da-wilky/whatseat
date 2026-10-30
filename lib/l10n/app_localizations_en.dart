@@ -164,7 +164,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get timeToAdd => 'to …';
 
   @override
-  String get sectionFood => 'Food / drinks';
+  String get sectionFood => 'Food';
 
   @override
   String get amount => 'Amount';
@@ -467,4 +467,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get drinkDefault => 'Water';
+
+  @override
+  String get sectionDrinks => 'Drinks';
+
+  @override
+  String get addDrink => 'Add drink';
+
+  @override
+  String get drinkHint => 'e.g. tea';
+
+  @override
+  String get foodUnits => 'serving||g|ml|tbsp|tsp|plate|bowl|slice|piece';
+
+  @override
+  String get noUnit => 'no unit';
+
+  @override
+  String get drinkUnits => 'ml|l|glass|cup|bottle';
+
+  @override
+  String get time => 'Time';
 }

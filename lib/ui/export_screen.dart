@@ -53,12 +53,37 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
       MaterialPageRoute(
         builder: (_) => Scaffold(
           appBar: AppBar(title: Text(l.protocolTitle)),
-          body: PdfPreview(
+          body: PdfPreview.builder(
             build: (_) async => buildProtocolPdf(l, await _load(), name),
             pdfFileName: '$_fileBase.pdf',
             canChangeOrientation: false,
             canChangePageFormat: false,
             canDebug: false,
+            // The default renders for screen width; zoomed-in text needs more detail.
+            dpi: 150,
+            // One zoomable surface for all pages; the stock preview only zooms a single page after a double tap.
+            pagesBuilder: (context, pages) => LayoutBuilder(
+              builder: (context, box) => InteractiveViewer(
+                constrained: false,
+                maxScale: 5,
+                child: Container(
+                  width: box.maxWidth,
+                  constraints: BoxConstraints(minHeight: box.maxHeight),
+                  padding: const EdgeInsets.all(8),
+                  child: Column(children: [
+                    for (final page in pages)
+                      Container(
+                        margin: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+                        ),
+                        child: AspectRatio(aspectRatio: page.aspectRatio, child: Image(image: page.image)),
+                      ),
+                  ]),
+                ),
+              ),
+            ),
           ),
         ),
       ),

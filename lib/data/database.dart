@@ -172,8 +172,9 @@ class AppDatabase extends _$AppDatabase {
     final byFood = <String, FoodSuggestion>{};
     for (final e in await _history()) {
       for (final item in e.items) {
-        final key = item.food.trim().toLowerCase();
-        if (key.isEmpty) continue;
+        final name = item.food.trim().toLowerCase();
+        if (name.isEmpty) continue;
+        final key = '${item.drink}|$name';
         final known = byFood[key];
         byFood[key] = known == null
             ? FoodSuggestion(item, 1)
@@ -183,10 +184,10 @@ class AppDatabase extends _$AppDatabase {
     return byFood.values.toList()..sort((a, b) => b.count.compareTo(a.count));
   }
 
-  Future<List<String>> unitHistory() async {
+  Future<List<String>> unitHistory({required bool drink}) async {
     final counts = <String, int>{};
     for (final e in await _history()) {
-      for (final unit in e.items.map((i) => i.unit).where((u) => u.isNotEmpty)) {
+      for (final unit in e.items.where((i) => i.drink == drink).map((i) => i.unit).where((u) => u.isNotEmpty)) {
         counts[unit] = (counts[unit] ?? 0) + 1;
       }
     }
@@ -203,11 +204,12 @@ class AppDatabase extends _$AppDatabase {
     return counts.keys.toList()..sort((a, b) => counts[b]!.compareTo(counts[a]!));
   }
 
-  /// Most recent entry per distinct set of foods.
+  /// Most recent meal per distinct set of foods; drinks have their own quick button.
   Future<List<MealEntry>> recentMeals({int limit = 8}) async {
     final seen = <String>{};
     final result = <MealEntry>[];
     for (final e in await _history()) {
+      if (e.meal == MealType.drink) continue;
       final signature = (e.items.map((i) => i.food.trim().toLowerCase()).toList()..sort()).join('|');
       if (signature.isEmpty || !seen.add(signature)) continue;
       result.add(e);

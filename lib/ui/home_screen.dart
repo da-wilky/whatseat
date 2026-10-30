@@ -140,8 +140,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             onPressed: () => openEntryEditor(
               context,
               EntryDraft.fresh(_day)
-                ..meal = MealType.snack
-                ..items = [FoodItem(quantity: 200, unit: 'ml', food: l.drinkDefault)],
+                ..meal = MealType.drink
+                ..items = [FoodItem(quantity: 200, unit: drinkUnits(l).first, food: l.drinkDefault, drink: true)],
             ),
             child: const Icon(Icons.water_drop_outlined),
           ),
@@ -555,8 +555,8 @@ class _EntryCard extends StatelessWidget {
                       Text(itemsSummary(l, entry.items), style: theme.textTheme.bodyMedium),
                       const SizedBox(height: 8),
                       Wrap(spacing: 6, runSpacing: 6, children: [
-                        if (entry.hunger != null) badge(Icons.wb_twilight_rounded, '${l.hunger} ${entry.hunger} %'),
-                        if (entry.satiety != null) badge(Icons.nights_stay_outlined, '${l.satiety} ${entry.satiety} %'),
+                        if (entry.hunger != null) badge(Icons.flatware_rounded, '${l.hunger} ${entry.hunger} %'),
+                        if (entry.satiety != null) badge(Icons.sentiment_satisfied_alt_rounded, '${l.satiety} ${entry.satiety} %'),
                         if (entry.running) badge(Icons.timelapse_rounded, l.inProgress),
                         if (entry.withWhom.isNotEmpty) badge(Icons.people_outline, entry.withWhom),
                         if (entry.binge) badge(Icons.warning_amber_rounded, l.binge, alert: true),

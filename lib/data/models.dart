@@ -2,7 +2,8 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
-enum MealType { breakfast, lunch, dinner, snack }
+// Stored by index: only append.
+enum MealType { breakfast, lunch, dinner, snack, drink }
 
 MealType mealTypeForTime(int minutes) {
   final h = minutes ~/ 60;
@@ -13,15 +14,16 @@ MealType mealTypeForTime(int minutes) {
 }
 
 class FoodItem {
-  const FoodItem({this.quantity, this.unit = '', required this.food});
+  const FoodItem({this.quantity, this.unit = '', required this.food, this.drink = false});
 
   final double? quantity;
 
   /// Stored in singular; pluralised for display.
   final String unit;
   final String food;
+  final bool drink;
 
-  Map<String, dynamic> toJson() => {'quantity': quantity, 'unit': unit, 'food': food};
+  Map<String, dynamic> toJson() => {'quantity': quantity, 'unit': unit, 'food': food, 'drink': drink};
 
   factory FoodItem.fromJson(Map<String, dynamic> json) {
     final legacyAmount = json['amount'] as String?;
@@ -37,6 +39,7 @@ class FoodItem {
       quantity: (json['quantity'] as num?)?.toDouble(),
       unit: json['unit'] as String? ?? '',
       food: json['food'] as String,
+      drink: json['drink'] as bool? ?? false,
     );
   }
 }

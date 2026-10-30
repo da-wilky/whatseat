@@ -165,7 +165,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get timeToAdd => 'bis …';
 
   @override
-  String get sectionFood => 'Lebensmittel / Getränke';
+  String get sectionFood => 'Lebensmittel';
 
   @override
   String get amount => 'Menge';
@@ -471,4 +471,25 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get drinkDefault => 'Wasser';
+
+  @override
+  String get sectionDrinks => 'Getränke';
+
+  @override
+  String get addDrink => 'Getränk hinzufügen';
+
+  @override
+  String get drinkHint => 'z. B. Tee';
+
+  @override
+  String get foodUnits => 'Portion||g|ml|EL|TL|Teller|Schüssel|Scheibe|Stück';
+
+  @override
+  String get noUnit => 'ohne Einheit';
+
+  @override
+  String get drinkUnits => 'ml|l|Glas|Tasse|Becher|Flasche';
+
+  @override
+  String get time => 'Uhrzeit';
 }

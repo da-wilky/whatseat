@@ -50,7 +50,7 @@
   "timeFrom": "from",
   "timeTo": "to",
   "timeToAdd": "to …",
-  "sectionFood": "Food / drinks",
+  "sectionFood": "Food",
   "amount": "Amount",
   "foodHint": "e.g. wholegrain bread",
   "addItem": "Add another",
@@ -142,5 +142,12 @@
   "statsSearch": "Search …",
   "statsIncidents": "Binge / measures",
   "drink": "Drink",
-  "drinkDefault": "Water"
+  "drinkDefault": "Water",
+  "sectionDrinks": "Drinks",
+  "addDrink": "Add drink",
+  "drinkHint": "e.g. tea",
+  "foodUnits": "serving||g|ml|tbsp|tsp|plate|bowl|slice|piece",
+  "noUnit": "no unit",
+  "drinkUnits": "ml|l|glass|cup|bottle",
+  "time": "Time"
 }

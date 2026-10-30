@@ -169,10 +169,12 @@ Future<void> finishEating(BuildContext context, MealEntry entry) async {
 
 class _ItemRow {
   _ItemRow(FoodItem item, String quantityText, {required this.touched})
-      : quantity = TextEditingController(text: quantityText),
+      : drink = item.drink,
+        quantity = TextEditingController(text: quantityText),
         unit = TextEditingController(text: item.unit),
         food = TextEditingController(text: item.food);
 
+  final bool drink;
   final TextEditingController quantity;
   final TextEditingController unit;
   final TextEditingController food;
@@ -202,9 +204,15 @@ class EntryEditor extends ConsumerStatefulWidget {
 class _EntryEditorState extends ConsumerState<EntryEditor> {
   late final EntryDraft _d = widget.draft;
   late final _quantityFormat = NumberFormat('#.##', AppLocalizations.of(context).localeName);
-  late final List<_ItemRow> _rows = [
-    for (final item in _d.items) _row(item),
-    if (_d.items.isEmpty) _newRow(),
+  late final List<_ItemRow> _foodRows = [
+    for (final item in _d.items)
+      if (!item.drink) _row(item),
+    if (!_isDrink && !_d.items.any((i) => !i.drink)) _newRow(drink: false),
+  ];
+  late final List<_ItemRow> _drinkRows = [
+    for (final item in _d.items)
+      if (item.drink) _row(item),
+    if (_isDrink && _d.items.isEmpty) _newRow(drink: true),
   ];
   late final _appetiteFor = TextEditingController(text: _d.appetiteFor);
   late final _before = TextEditingController(text: _d.situationBefore);
@@ -213,7 +221,10 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
   List<String> _whoHistory = const [];
   List<String> _measureHistory = const [];
   List<String> _unitHistory = const [];
+  List<String> _drinkUnitHistory = const [];
   bool _dirty = false;
+
+  bool get _isDrink => _d.meal == MealType.drink;
 
   bool get _staysRunning => widget.mode == EditorMode.start || (widget.mode == EditorMode.edit && _d.running);
 
@@ -228,19 +239,21 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
     final foods = await db.foodSuggestions();
     final who = await db.tagHistory((e) => e.withWhom);
     final measures = await db.tagHistory((e) => e.measures);
-    final units = await db.unitHistory();
+    final units = await db.unitHistory(drink: false);
+    final drinkUnits = await db.unitHistory(drink: true);
     if (!mounted) return;
     setState(() {
       _foods = foods;
       _whoHistory = who;
       _measureHistory = measures;
       _unitHistory = units;
+      _drinkUnitHistory = drinkUnits;
     });
   }
 
   @override
   void dispose() {
-    for (final r in _rows) {
+    for (final r in [..._foodRows, ..._drinkRows]) {
       r.dispose();
     }
     _appetiteFor.dispose();
@@ -251,11 +264,15 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
 
   _ItemRow _row(FoodItem item) => _ItemRow(item, _formatQuantity(item.quantity), touched: true);
 
-  _ItemRow _newRow() => _ItemRow(
-        FoodItem(quantity: 1, unit: defaultUnits(AppLocalizations.of(context)).first, food: ''),
-        _formatQuantity(1),
-        touched: false,
-      );
+  _ItemRow _newRow({required bool drink}) {
+    final l = AppLocalizations.of(context);
+    final quantity = drink ? 200.0 : 1.0;
+    return _ItemRow(
+      FoodItem(quantity: quantity, unit: (drink ? drinkUnits(l) : foodUnits(l)).first, food: '', drink: drink),
+      _formatQuantity(quantity),
+      touched: false,
+    );
+  }
 
   String _formatQuantity(double? q) => q == null ? '' : _quantityFormat.format(q);
 
@@ -281,15 +298,20 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
   }
 
   void _removeRow(_ItemRow row) {
-    _change(() => _rows.remove(row));
+    _change(() => (row.drink ? _drinkRows : _foodRows).remove(row));
     // Its text fields still reference the controllers until this frame unmounts them.
     WidgetsBinding.instance.addPostFrameCallback((_) => row.dispose());
   }
 
   List<FoodItem> _collectItems() => [
-        for (final r in _rows)
+        for (final r in [..._foodRows, ..._drinkRows])
           if (r.food.text.trim().isNotEmpty)
-            FoodItem(quantity: parseQuantity(r.quantity.text), unit: r.unit.text.trim(), food: r.food.text.trim()),
+            FoodItem(
+              quantity: parseQuantity(r.quantity.text),
+              unit: r.unit.text.trim(),
+              food: r.food.text.trim(),
+              drink: r.drink,
+            ),
       ];
 
   void _applyTexts() {
@@ -305,7 +327,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
     _d.running = _staysRunning;
     if (_d.items.isEmpty && !_d.running) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.needOneItem)));
-      _rows.first.foodFocus.requestFocus();
+      (_isDrink ? _drinkRows : _foodRows).first.foodFocus.requestFocus();
       return;
     }
     await ref.read(databaseProvider).saveEntry(_d.toCompanion());
@@ -359,19 +381,23 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
     _change(() => end ? _d.end = minutes : _d.start = minutes);
   }
 
-  void _addRow() {
-    final row = _newRow();
-    setState(() => _rows.add(row));
+  void _addRow({required bool drink}) {
+    final row = _newRow(drink: drink);
+    setState(() => (drink ? _drinkRows : _foodRows).add(row));
     WidgetsBinding.instance.addPostFrameCallback((_) => row.foodFocus.requestFocus());
   }
 
   Widget _itemRow(AppLocalizations l, int index, _ItemRow row) {
     final units = {
-      ...defaultUnits(l),
+      ...(row.drink ? drinkUnits(l) : foodUnits(l)),
       ...ref.watch(settingsProvider.select((s) => s.customUnits)),
-      ..._unitHistory,
+      ...(row.drink ? _drinkUnitHistory : _unitHistory),
       if (row.unit.text.isNotEmpty) row.unit.text,
     };
+    final foods = _foods.where((f) => f.last.drink == row.drink);
+    final rows = row.drink ? _drinkRows : _foodRows;
+    // The entry's own kind needs one row left; the other section can be emptied.
+    final removable = row.drink != _isDrink || rows.length > 1;
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SizedBox(
         width: 52,
@@ -395,6 +421,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
           unit: row.unit.text,
           units: units.toList(),
           newUnitLabel: l.newUnit,
+          noUnitLabel: l.noUnit,
           onSelected: (unit) => _change(() {
             row.unit.text = unit;
             row.touched = true;
@@ -407,11 +434,14 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
         child: _SuggestField<FoodSuggestion>(
           controller: row.food,
           focusNode: row.foodFocus,
-          hint: l.foodHint,
-          autofocus: index == 0 && _d.items.isEmpty && (_d.id == null || widget.mode == EditorMode.finish),
+          hint: row.drink ? l.drinkHint : l.foodHint,
+          autofocus: index == 0 &&
+              row.drink == _isDrink &&
+              _d.items.isEmpty &&
+              (_d.id == null || widget.mode == EditorMode.finish),
           options: (q) => q.isEmpty
-              ? _foods.take(6).toList()
-              : _foods.where((f) => f.food.toLowerCase().contains(q.toLowerCase())).take(8).toList(),
+              ? foods.take(6).toList()
+              : foods.where((f) => f.food.toLowerCase().contains(q.toLowerCase())).take(8).toList(),
           display: (f) => f.food,
           subtitle: (f) {
             final amount = formatAmount(l, f.last);
@@ -427,7 +457,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
           onChanged: _markDirty,
         ),
       ),
-      if (_rows.length > 1)
+      if (removable)
         IconButton(
           visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.close_rounded),
@@ -447,12 +477,13 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
     final meal = SectionCard(title: l.sectionMeal, icon: Icons.schedule_rounded, children: [
       Wrap(spacing: 8, runSpacing: 8, children: [
         for (final m in MealType.values)
-          ChoiceChip(
-            avatar: Icon(mealIcon(m), size: 18),
-            label: Text(mealLabel(l, m)),
-            selected: _d.meal == m,
-            onSelected: (_) => _change(() => _d.meal = m),
-          ),
+          if (m != MealType.drink)
+            ChoiceChip(
+              avatar: Icon(mealIcon(m), size: 18),
+              label: Text(mealLabel(l, m)),
+              selected: _d.meal == m,
+              onSelected: (_) => _change(() => _d.meal = m),
+            ),
       ]),
       gap,
       Row(children: [
@@ -471,17 +502,41 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
           ),
       ]),
     ]);
-    final food = SectionCard(title: l.sectionFood, icon: Icons.restaurant_rounded, children: [
-      for (final (i, row) in _rows.indexed) ...[
-        if (i > 0) const Divider(height: 24),
-        KeyedSubtree(key: ObjectKey(row), child: _itemRow(l, i, row)),
-      ],
-      const SizedBox(height: 4),
+    final time = SectionCard(title: l.time, icon: Icons.schedule_rounded, children: [
       Align(
         alignment: Alignment.centerLeft,
-        child: TextButton.icon(onPressed: _addRow, icon: const Icon(Icons.add_rounded), label: Text(l.addItem)),
+        child: ActionChip(
+          avatar: const Icon(Icons.edit_outlined, size: 18),
+          label: Text(formatMinutes(_d.start)),
+          onPressed: () => _pickTime(end: false),
+        ),
       ),
     ]);
+    SectionCard items({required bool drink}) {
+      final rows = drink ? _drinkRows : _foodRows;
+      return SectionCard(
+        title: drink ? l.sectionDrinks : l.sectionFood,
+        icon: drink ? Icons.local_drink_outlined : Icons.restaurant_rounded,
+        children: [
+          for (final (i, row) in rows.indexed) ...[
+            if (i > 0) const Divider(height: 24),
+            KeyedSubtree(key: ObjectKey(row), child: _itemRow(l, i, row)),
+          ],
+          if (rows.isNotEmpty) const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => _addRow(drink: drink),
+              icon: const Icon(Icons.add_rounded),
+              label: Text(drink ? l.addDrink : l.addItem),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final food = items(drink: false);
+    final drinks = items(drink: true);
     final who = SectionCard(title: l.withWhom, icon: Icons.people_outline_rounded, children: [
       TagPicker(
         value: _d.withWhom,
@@ -489,8 +544,8 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
         onChanged: (v) => _change(() => _d.withWhom = v),
       ),
     ]);
-    final before = SectionCard(title: l.sectionBefore, icon: Icons.wb_twilight_rounded, children: [
-      PercentSlider(label: l.hunger, value: _d.hunger, initial: 50, onChanged: (v) => _change(() => _d.hunger = v)),
+    final before = SectionCard(title: l.sectionBefore, icon: Icons.flatware_rounded, children: [
+      PercentSlider(label: l.hunger, value: _d.hunger, onChanged: (v) => _change(() => _d.hunger = v)),
       gap,
       TextField(
         controller: _appetiteFor,
@@ -506,8 +561,8 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
         decoration: InputDecoration(labelText: l.situationBefore, alignLabelWithHint: true),
       ),
     ]);
-    final after = SectionCard(title: l.sectionAfter, icon: Icons.nights_stay_outlined, children: [
-      PercentSlider(label: l.satiety, value: _d.satiety, initial: 90, onChanged: (v) => _change(() => _d.satiety = v)),
+    final after = SectionCard(title: l.sectionAfter, icon: Icons.sentiment_satisfied_alt_rounded, children: [
+      PercentSlider(label: l.satiety, value: _d.satiety, onChanged: (v) => _change(() => _d.satiety = v)),
       gap,
       TextField(
         controller: _after,
@@ -534,11 +589,13 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
         onChanged: (v) => _change(() => _d.measures = v),
       ),
     ]);
-    final sections = switch (widget.mode) {
-      EditorMode.start => [meal, who, before],
-      EditorMode.finish => [food, after, behaviour, meal, who, before],
-      EditorMode.edit => [meal, food, who, before, after, behaviour],
-    };
+    final sections = _isDrink
+        ? [time, drinks]
+        : switch (widget.mode) {
+            EditorMode.start => [meal, who, before],
+            EditorMode.finish => [food, drinks, after, behaviour, meal, who, before],
+            EditorMode.edit => [meal, food, drinks, who, before, after, behaviour],
+          };
 
     Widget hint(IconData icon, String text) => Padding(
           padding: const EdgeInsets.only(bottom: 12),
@@ -570,7 +627,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
           title: Text(switch (widget.mode) {
             EditorMode.start => l.startEating,
             EditorMode.finish => l.finishEating,
-            EditorMode.edit => _d.id == null ? l.newEntry : l.editEntry,
+            EditorMode.edit => _d.id != null ? l.editEntry : (_isDrink ? l.drink : l.newEntry),
           }),
           actions: [
             TextButton(onPressed: _save, child: Text(saveLabel)),
@@ -717,13 +774,10 @@ class _SuggestField<T extends Object> extends StatelessWidget {
 }
 
 class PercentSlider extends StatelessWidget {
-  const PercentSlider({super.key, required this.label, required this.value, required this.initial, required this.onChanged});
+  const PercentSlider({super.key, required this.label, required this.value, required this.onChanged});
 
   final String label;
   final int? value;
-
-  /// Where the thumb rests while unset; only a touch stores a value, so untouched entries stay distinguishable.
-  final int initial;
   final ValueChanged<int?> onChanged;
 
   @override
@@ -751,7 +805,7 @@ class PercentSlider extends StatelessWidget {
         Opacity(
           opacity: v == null ? 0.45 : 1,
           child: Slider(
-            value: (v ?? initial).toDouble(),
+            value: (v ?? 0).toDouble(),
             max: 100,
             divisions: 10,
             onChanged: (x) => onChanged(x.round()),
@@ -809,6 +863,7 @@ class _UnitPicker extends StatelessWidget {
     required this.unit,
     required this.units,
     required this.newUnitLabel,
+    required this.noUnitLabel,
     required this.onSelected,
     required this.onAdd,
   });
@@ -818,6 +873,7 @@ class _UnitPicker extends StatelessWidget {
   final String unit;
   final List<String> units;
   final String newUnitLabel;
+  final String noUnitLabel;
   final ValueChanged<String> onSelected;
   final VoidCallback onAdd;
 
@@ -831,7 +887,14 @@ class _UnitPicker extends StatelessWidget {
       constraints: const BoxConstraints(maxHeight: 360, minWidth: 160),
       onSelected: (v) => v == _addSentinel ? onAdd() : onSelected(v),
       itemBuilder: (_) => [
-        for (final u in units) PopupMenuItem(value: u, height: 40, child: Text(u)),
+        for (final u in units)
+          PopupMenuItem(
+            value: u,
+            height: 40,
+            child: u.isEmpty
+                ? Text(noUnitLabel, style: TextStyle(color: theme.colorScheme.onSurfaceVariant))
+                : Text(u),
+          ),
         const PopupMenuDivider(),
         PopupMenuItem(
           value: _addSentinel,
@@ -849,7 +912,7 @@ class _UnitPicker extends StatelessWidget {
           suffixIcon: Icon(Icons.arrow_drop_down_rounded),
           suffixIconConstraints: BoxConstraints(minWidth: 28),
         ),
-        child: Text(unit, maxLines: 1, overflow: TextOverflow.ellipsis),
+        child: Text(unit.isEmpty ? '–' : unit, maxLines: 1, overflow: TextOverflow.ellipsis),
       ),
     );
   }

@@ -421,22 +421,25 @@ class _ProtocolCardState extends State<_ProtocolCard> {
                   if (e.situationBefore.isNotEmpty) field(l.situationBefore, e.situationBefore),
                   if (e.appetiteFor.isNotEmpty) field(l.appetiteFor, e.appetiteFor),
                 ],
-                heading(l.sectionFood),
-                const SizedBox(height: 6),
-                Table(
-                  columnWidths: const {0: IntrinsicColumnWidth(), 1: FlexColumnWidth()},
-                  children: [
-                    for (final item in e.items)
-                      TableRow(children: [
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12, bottom: 4),
-                          child: Text(formatAmount(l, item),
-                              textAlign: TextAlign.right, style: body?.copyWith(color: scheme.onSurfaceVariant)),
-                        ),
-                        Padding(padding: const EdgeInsets.only(bottom: 4), child: Text(item.food, style: body)),
-                      ]),
+                for (final drinks in const [false, true])
+                  if (e.items.where((i) => i.drink == drinks).toList() case final items when items.isNotEmpty) ...[
+                    heading(drinks ? l.sectionDrinks : l.sectionFood),
+                    const SizedBox(height: 6),
+                    Table(
+                      columnWidths: const {0: IntrinsicColumnWidth(), 1: FlexColumnWidth()},
+                      children: [
+                        for (final item in items)
+                          TableRow(children: [
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12, bottom: 4),
+                              child: Text(formatAmount(l, item),
+                                  textAlign: TextAlign.right, style: body?.copyWith(color: scheme.onSurfaceVariant)),
+                            ),
+                            Padding(padding: const EdgeInsets.only(bottom: 4), child: Text(item.food, style: body)),
+                          ]),
+                      ],
+                    ),
                   ],
-                ),
               ],
               if (e.hunger != null || e.satiety != null) ...[
                 const SizedBox(height: 12),

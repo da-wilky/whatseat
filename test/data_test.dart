@@ -36,6 +36,17 @@ void main() {
     expect(daysBetween(DateTime(2026, 10, 26), DateTime(2026, 10, 24)), -2);
   });
 
+  test('drinks and foods suggest separately', () async {
+    await db.saveEntry(_entry('2026-10-29', 8 * 60, const [
+      FoodItem(quantity: 1, unit: 'Scheibe', food: 'Brot'),
+      FoodItem(quantity: 200, unit: 'ml', food: 'Wasser', drink: true),
+    ]));
+    final suggestions = await db.foodSuggestions();
+    expect([for (final s in suggestions.where((s) => s.last.drink)) s.food], ['Wasser']);
+    expect(await db.unitHistory(drink: true), ['ml']);
+    expect(FoodItem.fromJson(const {'quantity': 1, 'unit': 'Scheibe', 'food': 'Brot'}).drink, isFalse);
+  });
+
   test('legacy amount strings are parsed', () {
     final item = FoodItem.fromJson(const {'amount': '1,5 Scheiben', 'food': 'Brot'});
     expect(item.quantity, 1.5);

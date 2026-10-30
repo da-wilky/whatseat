@@ -401,7 +401,7 @@ abstract class AppLocalizations {
   /// No description provided for @sectionFood.
   ///
   /// In de, this message translates to:
-  /// **'Lebensmittel / Getränke'**
+  /// **'Lebensmittel'**
   String get sectionFood;
 
   /// No description provided for @amount.
@@ -955,6 +955,48 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Wasser'**
   String get drinkDefault;
+
+  /// No description provided for @sectionDrinks.
+  ///
+  /// In de, this message translates to:
+  /// **'Getränke'**
+  String get sectionDrinks;
+
+  /// No description provided for @addDrink.
+  ///
+  /// In de, this message translates to:
+  /// **'Getränk hinzufügen'**
+  String get addDrink;
+
+  /// No description provided for @drinkHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z. B. Tee'**
+  String get drinkHint;
+
+  /// The empty entry means no unit, e.g. 2 Bananen
+  ///
+  /// In de, this message translates to:
+  /// **'Portion||g|ml|EL|TL|Teller|Schüssel|Scheibe|Stück'**
+  String get foodUnits;
+
+  /// No description provided for @noUnit.
+  ///
+  /// In de, this message translates to:
+  /// **'ohne Einheit'**
+  String get noUnit;
+
+  /// No description provided for @drinkUnits.
+  ///
+  /// In de, this message translates to:
+  /// **'ml|l|Glas|Tasse|Becher|Flasche'**
+  String get drinkUnits;
+
+  /// No description provided for @time.
+  ///
+  /// In de, this message translates to:
+  /// **'Uhrzeit'**
+  String get time;
 }
 
 class _AppLocalizationsDelegate

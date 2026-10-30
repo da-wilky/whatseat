@@ -9,6 +9,7 @@ String mealLabel(AppLocalizations l, MealType meal) => switch (meal) {
       MealType.lunch => l.mealLunch,
       MealType.dinner => l.mealDinner,
       MealType.snack => l.mealSnack,
+      MealType.drink => l.drink,
     };
 
 IconData mealIcon(MealType meal) => switch (meal) {
@@ -16,6 +17,7 @@ IconData mealIcon(MealType meal) => switch (meal) {
       MealType.lunch => Icons.lunch_dining_outlined,
       MealType.dinner => Icons.dinner_dining_outlined,
       MealType.snack => Icons.cookie_outlined,
+      MealType.drink => Icons.local_drink_outlined,
     };
 
 /// (background, foreground) of a meal's marker.
@@ -24,9 +26,12 @@ IconData mealIcon(MealType meal) => switch (meal) {
       MealType.lunch => (s.primary, s.onPrimary),
       MealType.dinner => (s.secondary, s.onSecondary),
       MealType.snack => (s.secondaryContainer, s.onSecondaryContainer),
+      MealType.drink => (s.tertiary, s.onTertiary),
     };
 
-List<String> defaultUnits(AppLocalizations l) => [for (final pair in l.unitDefs.split('|')) pair.split('/').first];
+List<String> foodUnits(AppLocalizations l) => l.foodUnits.split('|');
+
+List<String> drinkUnits(AppLocalizations l) => l.drinkUnits.split('|');
 
 String formatAmount(AppLocalizations l, FoodItem item) {
   final q = item.quantity;

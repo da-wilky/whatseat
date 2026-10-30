@@ -50,7 +50,7 @@
   "timeFrom": "von",
   "timeTo": "bis",
   "timeToAdd": "bis …",
-  "sectionFood": "Lebensmittel / Getränke",
+  "sectionFood": "Lebensmittel",
   "amount": "Menge",
   "foodHint": "z. B. Vollkornbrot",
   "addItem": "Weiteres hinzufügen",
@@ -194,5 +194,15 @@
   "statsSearch": "Suchen …",
   "statsIncidents": "Essanfall / Maßnahmen",
   "drink": "Getränk",
-  "drinkDefault": "Wasser"
+  "drinkDefault": "Wasser",
+  "sectionDrinks": "Getränke",
+  "addDrink": "Getränk hinzufügen",
+  "drinkHint": "z. B. Tee",
+  "foodUnits": "Portion||g|ml|EL|TL|Teller|Schüssel|Scheibe|Stück",
+  "@foodUnits": {
+    "description": "The empty entry means no unit, e.g. 2 Bananen"
+  },
+  "noUnit": "ohne Einheit",
+  "drinkUnits": "ml|l|Glas|Tasse|Becher|Flasche",
+  "time": "Uhrzeit"
 }
