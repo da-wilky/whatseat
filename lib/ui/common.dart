@@ -18,6 +18,14 @@ IconData mealIcon(MealType meal) => switch (meal) {
       MealType.snack => Icons.cookie_outlined,
     };
 
+/// (background, foreground) of a meal's marker.
+(Color, Color) mealColors(ColorScheme s, MealType meal) => switch (meal) {
+      MealType.breakfast => (s.tertiaryContainer, s.onTertiaryContainer),
+      MealType.lunch => (s.primary, s.onPrimary),
+      MealType.dinner => (s.secondary, s.onSecondary),
+      MealType.snack => (s.secondaryContainer, s.onSecondaryContainer),
+    };
+
 List<String> defaultUnits(AppLocalizations l) => [for (final pair in l.unitDefs.split('|')) pair.split('/').first];
 
 String formatAmount(AppLocalizations l, FoodItem item) {

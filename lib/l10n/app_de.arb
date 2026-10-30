@@ -188,5 +188,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "statistics": "Statistik",
+  "statsEmpty": "Keine Einträge in diesem Zeitraum",
+  "statsSearch": "Suchen …",
+  "statsIncidents": "Essanfall / Maßnahmen"
 }

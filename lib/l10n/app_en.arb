@@ -136,5 +136,9 @@
   "finishEating": "Finish eating",
   "whenDidYouStop": "When did you stop?",
   "inProgress": "in progress",
-  "runningSince": "{meal} since {time}"
+  "runningSince": "{meal} since {time}",
+  "statistics": "Statistics",
+  "statsEmpty": "No entries in this period",
+  "statsSearch": "Search …",
+  "statsIncidents": "Binge / measures"
 }

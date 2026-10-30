@@ -919,6 +919,30 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'{meal} seit {time}'**
   String runningSince(String meal, String time);
+
+  /// No description provided for @statistics.
+  ///
+  /// In de, this message translates to:
+  /// **'Statistik'**
+  String get statistics;
+
+  /// No description provided for @statsEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Einträge in diesem Zeitraum'**
+  String get statsEmpty;
+
+  /// No description provided for @statsSearch.
+  ///
+  /// In de, this message translates to:
+  /// **'Suchen …'**
+  String get statsSearch;
+
+  /// No description provided for @statsIncidents.
+  ///
+  /// In de, this message translates to:
+  /// **'Essanfall / Maßnahmen'**
+  String get statsIncidents;
 }
 
 class _AppLocalizationsDelegate

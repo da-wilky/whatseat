@@ -453,4 +453,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String runningSince(String meal, String time) {
     return '$meal seit $time';
   }
+
+  @override
+  String get statistics => 'Statistik';
+
+  @override
+  String get statsEmpty => 'Keine Einträge in diesem Zeitraum';
+
+  @override
+  String get statsSearch => 'Suchen …';
+
+  @override
+  String get statsIncidents => 'Essanfall / Maßnahmen';
 }

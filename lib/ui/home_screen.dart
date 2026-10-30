@@ -14,6 +14,7 @@ import 'entry_editor.dart';
 import 'export_screen.dart';
 import 'quick_add_sheet.dart';
 import 'settings_screen.dart';
+import 'statistics_screen.dart';
 import 'templates_screen.dart';
 
 const _basePage = 100000;
@@ -108,6 +109,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           PopupMenuButton<VoidCallback>(
             onSelected: (action) => action(),
             itemBuilder: (_) => [
+              PopupMenuItem(value: () => push(const StatisticsScreen()), child: Text(l.statistics)),
               PopupMenuItem(value: () => push(ExportScreen(initialDay: _day)), child: Text(l.export)),
               PopupMenuItem(value: () => push(const TemplatesScreen()), child: Text(l.templates)),
               PopupMenuItem(value: () => push(const SettingsScreen()), child: Text(l.settings)),
@@ -317,13 +319,6 @@ class _DayTimeline extends StatelessWidget {
 
   static const _marker = 26.0;
 
-  (Color, Color) _colors(ColorScheme s, MealType meal) => switch (meal) {
-        MealType.breakfast => (s.tertiaryContainer, s.onTertiaryContainer),
-        MealType.lunch => (s.primary, s.onPrimary),
-        MealType.dinner => (s.secondary, s.onSecondary),
-        MealType.snack => (s.secondaryContainer, s.onSecondaryContainer),
-      };
-
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -366,7 +361,7 @@ class _DayTimeline extends StatelessWidget {
                     child: Container(
                       height: 6,
                       decoration: BoxDecoration(
-                        color: _colors(scheme, e.meal).$1,
+                        color: mealColors(scheme, e.meal).$1,
                         borderRadius: BorderRadius.circular(3),
                       ),
                     ),
@@ -376,8 +371,8 @@ class _DayTimeline extends StatelessWidget {
                   top: 0,
                   child: CircleAvatar(
                     radius: _marker / 2,
-                    backgroundColor: _colors(scheme, e.meal).$1,
-                    child: Icon(mealIcon(e.meal), size: 14, color: _colors(scheme, e.meal).$2),
+                    backgroundColor: mealColors(scheme, e.meal).$1,
+                    child: Icon(mealIcon(e.meal), size: 14, color: mealColors(scheme, e.meal).$2),
                   ),
                 ),
               ],
