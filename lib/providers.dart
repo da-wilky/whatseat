@@ -10,12 +10,25 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/database.dart';
 
-const secureStorage = FlutterSecureStorage();
+const secureStorage = FlutterSecureStorage(
+  // The default wipes every secret on a read error, the DB key included; failing lands on the recovery screen instead.
+  aOptions: AndroidOptions(resetOnError: false),
+  // Keychain items that aren't ThisDeviceOnly travel in iCloud backups.
+  iOptions: IOSOptions(accessibility: KeychainAccessibility.unlocked_this_device),
+);
+
+/// The database and its SQLite side files, where drift_flutter puts `driftDatabase(name: 'whatseat')`.
+Future<List<File>> databaseFiles() async {
+  final dir = await getApplicationDocumentsDirectory();
+  return [for (final suffix in ['', '-wal', '-shm', '-journal']) File(p.join(dir.path, 'whatseat.sqlite$suffix'))];
+}
 
 Future<String> loadOrCreateDbKey() async {
   const name = 'db_key';
   final existing = await secureStorage.read(key: name);
   if (existing != null) return existing;
+  // A fresh key can't open the existing file and would replace any chance of getting the old one back.
+  if (await (await databaseFiles()).first.exists()) throw StateError('Database key missing');
   final random = Random.secure();
   final key = List.generate(32, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
   await secureStorage.write(key: name, value: key);
@@ -24,10 +37,7 @@ Future<String> loadOrCreateDbKey() async {
 
 /// Irreversible: deletes the (unreadable) database and its key.
 Future<void> resetDatabase() async {
-  // Same location drift_flutter uses for `driftDatabase(name: 'whatseat')`.
-  final dir = await getApplicationDocumentsDirectory();
-  for (final suffix in ['', '-wal', '-shm', '-journal']) {
-    final file = File(p.join(dir.path, 'whatseat.sqlite$suffix'));
+  for (final file in await databaseFiles()) {
     if (await file.exists()) await file.delete();
   }
   await secureStorage.delete(key: 'db_key');

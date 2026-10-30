@@ -254,8 +254,12 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     });
     if (pin.length < ref.read(settingsProvider).pinLength) return;
     _checking = true;
-    final ok = await verifyPin(pin);
-    _checking = false;
+    final bool ok;
+    try {
+      ok = await verifyPin(pin);
+    } finally {
+      _checking = false;
+    }
     if (ok) {
       await _unlock();
     } else {

@@ -250,12 +250,21 @@ class AppDatabase extends _$AppDatabase {
     ));
   }
 
+  Future<void> purgeDeleted() => transaction(() async {
+        await (delete(mealEntries)..where((e) => e.deletedAt.isNotNull())).go();
+        await (delete(mealTemplates)..where((t) => t.deletedAt.isNotNull())).go();
+      });
+
   Future<Map<String, dynamic>> exportBackup() async => {
         'format': 'whatseat-backup',
         'version': schemaVersion,
-        'entries': [for (final r in await select(mealEntries).get()) r.toJson()],
+        'entries': [
+          for (final r in await (select(mealEntries)..where((e) => e.deletedAt.isNull())).get()) r.toJson(),
+        ],
         'dayNotes': [for (final r in await select(dayNotes).get()) r.toJson()],
-        'templates': [for (final r in await select(mealTemplates).get()) r.toJson()],
+        'templates': [
+          for (final r in await (select(mealTemplates)..where((t) => t.deletedAt.isNull())).get()) r.toJson(),
+        ],
       };
 
   /// Merges by primary key; the row with the newer `updatedAt` wins.

@@ -47,6 +47,22 @@ void main() {
     expect(FoodItem.fromJson(const {'quantity': 1, 'unit': 'Scheibe', 'food': 'Brot'}).drink, isFalse);
   });
 
+  test('deleted entries are purged and left out of backups', () async {
+    final entry = _entry('2026-10-29', 8 * 60, const [FoodItem(food: 'Brot')]);
+    await db.saveEntry(entry);
+    await db.setEntryDeleted(entry.id.value, true);
+    expect((await db.exportBackup())['entries'], isEmpty);
+    await db.purgeDeleted();
+    expect(await db.select(db.mealEntries).get(), isEmpty);
+  });
+
+  test('CSV cells cannot start a formula', () async {
+    final l = await AppLocalizations.delegate.load(const Locale('de'));
+    await db.saveEntry(_entry('2026-10-29', 8 * 60, const [FoodItem(food: '=HYPERLINK("x")')]));
+    final csv = buildProtocolCsv(l, await loadProtocol(db, DateTime(2026, 10, 29), DateTime(2026, 10, 29)));
+    expect(csv, contains("'=HYPERLINK"));
+  });
+
   test('legacy amount strings are parsed', () {
     final item = FoodItem.fromJson(const {'amount': '1,5 Scheiben', 'food': 'Brot'});
     expect(item.quantity, 1.5);

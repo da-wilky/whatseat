@@ -59,6 +59,23 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
             canChangeOrientation: false,
             canChangePageFormat: false,
             canDebug: false,
+            // The built-in print and share buttons leave the app without withoutRelock, which re-locks it on return.
+            allowPrinting: false,
+            allowSharing: false,
+            actions: [
+              PdfPreviewAction(
+                icon: const Icon(Icons.print_outlined),
+                onPressed: (_, build, format) =>
+                    withoutRelock(() => Printing.layoutPdf(onLayout: build, name: l.protocolTitle, format: format)),
+              ),
+              PdfPreviewAction(
+                icon: const Icon(Icons.share_outlined),
+                onPressed: (_, build, format) async {
+                  final bytes = await build(format);
+                  await withoutRelock(() => Printing.sharePdf(bytes: bytes, filename: '$_fileBase.pdf'));
+                },
+              ),
+            ],
             // The default renders for screen width; zoomed-in text needs more detail.
             dpi: 150,
             // One zoomable surface for all pages; the stock preview only zooms a single page after a double tap.

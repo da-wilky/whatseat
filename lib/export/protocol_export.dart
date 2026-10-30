@@ -193,5 +193,10 @@ String buildProtocolCsv(AppLocalizations l, List<ProtocolDay> days) {
         ],
   ];
   // Excel variant: BOM and ';' delimiter, which German Excel expects.
-  return excel.encode(rows);
+  return excel.encode([
+    for (final row in rows) [for (final cell in row) cell is String ? _csvText(cell) : cell],
+  ]);
 }
+
+/// Excel evaluates cells starting with these as formulas; the leading apostrophe keeps them plain text.
+String _csvText(String value) => value.startsWith(RegExp(r'[=+\-@\t\r]')) ? "'$value" : value;

@@ -31,6 +31,24 @@ import UIKit
         self?.privacyCoverEnabled = secure
         result(nil)
       }
+    FlutterMethodChannel(name: "whatseat/storage", binaryMessenger: registrar.messenger())
+      .setMethodCallHandler { call, result in
+        guard call.method == "excludeFromBackup", let paths = call.arguments as? [String] else {
+          result(FlutterMethodNotImplemented)
+          return
+        }
+        do {
+          for path in paths {
+            var url = URL(fileURLWithPath: path)
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try url.setResourceValues(values)
+          }
+          result(nil)
+        } catch {
+          result(FlutterError(code: "exclude", message: error.localizedDescription, details: nil))
+        }
+      }
   }
 
   @objc private func showPrivacyCover() {

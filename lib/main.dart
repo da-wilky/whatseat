@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -31,6 +32,17 @@ Future<void> _deleteOldExports() async {
   }
 }
 
+// iOS backs up Documents to iCloud; Android's backup is switched off in the manifest.
+Future<void> _excludeFromBackup() async {
+  if (!Platform.isIOS) return;
+  final paths = [for (final f in await databaseFiles()) if (await f.exists()) f.path];
+  try {
+    await const MethodChannel('whatseat/storage').invokeMethod('excludeFromBackup', paths);
+  } on PlatformException {
+    // Best effort: the next start tries again.
+  }
+}
+
 Future<void> _start(SharedPreferencesWithCache prefs, {Map<String, dynamic>? restore}) async {
   AppDatabase? db;
   try {
@@ -50,7 +62,10 @@ Future<void> _start(SharedPreferencesWithCache prefs, {Map<String, dynamic>? res
     ));
     return;
   }
+  // Undo only lives as long as the snackbar, so anything still marked deleted is gone for good.
+  await db.purgeDeleted();
   if (restore != null) await db.importBackup(restore);
+  await _excludeFromBackup();
   runApp(ProviderScope(
     overrides: [
       databaseProvider.overrideWithValue(db),
