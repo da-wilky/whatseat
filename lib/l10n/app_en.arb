@@ -140,5 +140,7 @@
   "statistics": "Statistics",
   "statsEmpty": "No entries in this period",
   "statsSearch": "Search …",
-  "statsIncidents": "Binge / measures"
+  "statsIncidents": "Binge / measures",
+  "drink": "Drink",
+  "drinkDefault": "Water"
 }

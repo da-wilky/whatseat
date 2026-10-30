@@ -943,6 +943,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Essanfall / Maßnahmen'**
   String get statsIncidents;
+
+  /// No description provided for @drink.
+  ///
+  /// In de, this message translates to:
+  /// **'Getränk'**
+  String get drink;
+
+  /// No description provided for @drinkDefault.
+  ///
+  /// In de, this message translates to:
+  /// **'Wasser'**
+  String get drinkDefault;
 }
 
 class _AppLocalizationsDelegate

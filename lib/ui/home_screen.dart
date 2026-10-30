@@ -130,10 +130,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showQuickAddSheet(context, _day),
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l.addEntry),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.small(
+            heroTag: 'drink',
+            tooltip: l.drink,
+            onPressed: () => openEntryEditor(
+              context,
+              EntryDraft.fresh(_day)
+                ..meal = MealType.snack
+                ..items = [FoodItem(quantity: 200, unit: 'ml', food: l.drinkDefault)],
+            ),
+            child: const Icon(Icons.water_drop_outlined),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.extended(
+            onPressed: () => showQuickAddSheet(context, _day),
+            icon: const Icon(Icons.add_rounded),
+            label: Text(l.addEntry),
+          ),
+        ],
       ),
     );
   }

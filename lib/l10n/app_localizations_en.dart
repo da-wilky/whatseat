@@ -461,4 +461,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statsIncidents => 'Binge / measures';
+
+  @override
+  String get drink => 'Drink';
+
+  @override
+  String get drinkDefault => 'Water';
 }

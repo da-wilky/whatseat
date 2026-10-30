@@ -465,4 +465,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get statsIncidents => 'Essanfall / Maßnahmen';
+
+  @override
+  String get drink => 'Getränk';
+
+  @override
+  String get drinkDefault => 'Wasser';
 }
