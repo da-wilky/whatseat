@@ -306,7 +306,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupCreate => 'Create backup';
 
   @override
-  String get backupWarning => 'The backup file is not encrypted';
+  String get backupWarning => 'Best encrypted with a password';
 
   @override
   String get backupRestore => 'Restore backup';
@@ -488,4 +488,54 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get time => 'Time';
+
+  @override
+  String get backupEncryptTitle => 'Protect backup with a password';
+
+  @override
+  String get backupEncryptHint =>
+      'With a password, nobody who doesn\'t know it can read the file. Keep it safe: a forgotten password can\'t be reset, and the backup would be lost.';
+
+  @override
+  String get password => 'Password';
+
+  @override
+  String get passwordRepeat => 'Repeat password';
+
+  @override
+  String passwordTooShort(int min) {
+    return 'At least $min characters';
+  }
+
+  @override
+  String get passwordMismatch => 'The passwords don\'t match';
+
+  @override
+  String get backupEncrypt => 'Encrypt';
+
+  @override
+  String get backupWithoutPassword => 'Without password';
+
+  @override
+  String get backupUnencryptedTitle => 'Really without a password?';
+
+  @override
+  String get backupUnencryptedRisk =>
+      'Without a password, any person or app that gets hold of the file can read your entire food diary – including all notes, thoughts and feelings.\n\nThat happens more easily than you\'d think: through chats and emails, automatic cloud uploads, the downloads folder or a lost device.';
+
+  @override
+  String get backupUnencryptedConfirm => 'Continue without password';
+
+  @override
+  String get backupSetPassword => 'Set password';
+
+  @override
+  String get backupLockedTitle => 'Encrypted backup';
+
+  @override
+  String get backupLockedHint =>
+      'Enter the password this backup was created with.';
+
+  @override
+  String get backupWrongPassword => 'Wrong password';
 }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -36,13 +37,18 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
 
   Future<List<ProtocolDay>> _load() => loadProtocol(ref.read(databaseProvider), _range.start, _range.end);
 
+  // share_plus waits until the share sheet closes; Printing.sharePdf returns right away on Android,
+  // so the app would already count as back when it actually leaves, and re-lock.
+  Future<void> _share(String extension, List<int> bytes) async {
+    final subject = AppLocalizations.of(context).protocolTitle;
+    final file = File(p.join((await getTemporaryDirectory()).path, '$_fileBase.$extension'));
+    await file.writeAsBytes(bytes);
+    await withoutRelock(() => SharePlus.instance.share(ShareParams(files: [XFile(file.path)], subject: subject)));
+  }
+
   Future<void> _shareCsv() async {
     final l = AppLocalizations.of(context);
-    final csv = buildProtocolCsv(l, await _load());
-    final dir = await getTemporaryDirectory();
-    final file = File(p.join(dir.path, '$_fileBase.csv'));
-    await file.writeAsString(csv);
-    await withoutRelock(() => SharePlus.instance.share(ShareParams(files: [XFile(file.path)], subject: l.protocolTitle)));
+    await _share('csv', utf8.encode(buildProtocolCsv(l, await _load())));
   }
 
   void _previewPdf() {
@@ -70,10 +76,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
               ),
               PdfPreviewAction(
                 icon: const Icon(Icons.share_outlined),
-                onPressed: (_, build, format) async {
-                  final bytes = await build(format);
-                  await withoutRelock(() => Printing.sharePdf(bytes: bytes, filename: '$_fileBase.pdf'));
-                },
+                onPressed: (_, build, format) async => _share('pdf', await build(format)),
               ),
             ],
             // The default renders for screen width; zoomed-in text needs more detail.

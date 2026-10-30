@@ -665,7 +665,7 @@ abstract class AppLocalizations {
   /// No description provided for @backupWarning.
   ///
   /// In de, this message translates to:
-  /// **'Die Backup-Datei ist nicht verschlüsselt'**
+  /// **'Am besten mit Passwort verschlüsselt'**
   String get backupWarning;
 
   /// No description provided for @backupRestore.
@@ -997,6 +997,96 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Uhrzeit'**
   String get time;
+
+  /// No description provided for @backupEncryptTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup mit Passwort schützen'**
+  String get backupEncryptTitle;
+
+  /// No description provided for @backupEncryptHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Mit Passwort kann niemand die Datei lesen, der das Passwort nicht kennt. Bewahre es gut auf: Ein vergessenes Passwort lässt sich nicht zurücksetzen, das Backup wäre dann verloren.'**
+  String get backupEncryptHint;
+
+  /// No description provided for @password.
+  ///
+  /// In de, this message translates to:
+  /// **'Passwort'**
+  String get password;
+
+  /// No description provided for @passwordRepeat.
+  ///
+  /// In de, this message translates to:
+  /// **'Passwort wiederholen'**
+  String get passwordRepeat;
+
+  /// No description provided for @passwordTooShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestens {min} Zeichen'**
+  String passwordTooShort(int min);
+
+  /// No description provided for @passwordMismatch.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Passwörter stimmen nicht überein'**
+  String get passwordMismatch;
+
+  /// No description provided for @backupEncrypt.
+  ///
+  /// In de, this message translates to:
+  /// **'Verschlüsseln'**
+  String get backupEncrypt;
+
+  /// No description provided for @backupWithoutPassword.
+  ///
+  /// In de, this message translates to:
+  /// **'Ohne Passwort'**
+  String get backupWithoutPassword;
+
+  /// No description provided for @backupUnencryptedTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Wirklich ohne Passwort?'**
+  String get backupUnencryptedTitle;
+
+  /// No description provided for @backupUnencryptedRisk.
+  ///
+  /// In de, this message translates to:
+  /// **'Ohne Passwort kann jede Person und jede App, die an die Datei kommt, dein komplettes Essprotokoll lesen – mit allen Notizen, Gedanken und Gefühlen.\n\nDas passiert schneller als gedacht: über Chats und E-Mails, automatische Cloud-Uploads, den Download-Ordner oder ein verlorenes Gerät.'**
+  String get backupUnencryptedRisk;
+
+  /// No description provided for @backupUnencryptedConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Trotzdem ohne Passwort'**
+  String get backupUnencryptedConfirm;
+
+  /// No description provided for @backupSetPassword.
+  ///
+  /// In de, this message translates to:
+  /// **'Passwort festlegen'**
+  String get backupSetPassword;
+
+  /// No description provided for @backupLockedTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Verschlüsseltes Backup'**
+  String get backupLockedTitle;
+
+  /// No description provided for @backupLockedHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Gib das Passwort ein, mit dem dieses Backup erstellt wurde.'**
+  String get backupLockedHint;
+
+  /// No description provided for @backupWrongPassword.
+  ///
+  /// In de, this message translates to:
+  /// **'Falsches Passwort'**
+  String get backupWrongPassword;
 }
 
 class _AppLocalizationsDelegate

@@ -309,7 +309,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get backupCreate => 'Backup erstellen';
 
   @override
-  String get backupWarning => 'Die Backup-Datei ist nicht verschlüsselt';
+  String get backupWarning => 'Am besten mit Passwort verschlüsselt';
 
   @override
   String get backupRestore => 'Backup wiederherstellen';
@@ -492,4 +492,54 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get time => 'Uhrzeit';
+
+  @override
+  String get backupEncryptTitle => 'Backup mit Passwort schützen';
+
+  @override
+  String get backupEncryptHint =>
+      'Mit Passwort kann niemand die Datei lesen, der das Passwort nicht kennt. Bewahre es gut auf: Ein vergessenes Passwort lässt sich nicht zurücksetzen, das Backup wäre dann verloren.';
+
+  @override
+  String get password => 'Passwort';
+
+  @override
+  String get passwordRepeat => 'Passwort wiederholen';
+
+  @override
+  String passwordTooShort(int min) {
+    return 'Mindestens $min Zeichen';
+  }
+
+  @override
+  String get passwordMismatch => 'Die Passwörter stimmen nicht überein';
+
+  @override
+  String get backupEncrypt => 'Verschlüsseln';
+
+  @override
+  String get backupWithoutPassword => 'Ohne Passwort';
+
+  @override
+  String get backupUnencryptedTitle => 'Wirklich ohne Passwort?';
+
+  @override
+  String get backupUnencryptedRisk =>
+      'Ohne Passwort kann jede Person und jede App, die an die Datei kommt, dein komplettes Essprotokoll lesen – mit allen Notizen, Gedanken und Gefühlen.\n\nDas passiert schneller als gedacht: über Chats und E-Mails, automatische Cloud-Uploads, den Download-Ordner oder ein verlorenes Gerät.';
+
+  @override
+  String get backupUnencryptedConfirm => 'Trotzdem ohne Passwort';
+
+  @override
+  String get backupSetPassword => 'Passwort festlegen';
+
+  @override
+  String get backupLockedTitle => 'Verschlüsseltes Backup';
+
+  @override
+  String get backupLockedHint =>
+      'Gib das Passwort ein, mit dem dieses Backup erstellt wurde.';
+
+  @override
+  String get backupWrongPassword => 'Falsches Passwort';
 }

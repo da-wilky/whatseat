@@ -8,10 +8,12 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../data/backup_crypto.dart';
 import '../data/models.dart';
 import '../l10n/app_localizations.dart';
 import '../lock/app_lock.dart';
 import '../providers.dart';
+import 'backup_dialogs.dart';
 import 'entry_editor.dart';
 import 'export_screen.dart';
 import 'templates_screen.dart';
@@ -73,7 +75,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _exportBackup() async {
     final l = AppLocalizations.of(context);
-    final json = await ref.read(databaseProvider).exportBackup();
+    final password = await askExportPassword(context);
+    if (password == null || !mounted) return;
+    final plain = await ref.read(databaseProvider).exportBackup();
+    if (!mounted) return;
+    final json = password.isEmpty ? plain : await withBusyDialog(context, () => encryptBackup(plain, password));
     final dir = await getTemporaryDirectory();
     final file = File(p.join(dir.path, 'whatseat-backup-${dayKey(DateTime.now())}.json'));
     await file.writeAsString(jsonEncode(json));
@@ -87,10 +93,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (picked == null) return;
     try {
       final json = jsonDecode(utf8.decode(await picked.readAsBytes())) as Map<String, dynamic>;
-      final count = await ref.read(databaseProvider).importBackup(json);
+      if (!mounted) return;
+      final backup = await openBackup(context, json);
+      if (backup == null) return;
+      final count = await ref.read(databaseProvider).importBackup(backup);
       _snack(l.backupImported(count));
     } on Object catch (e) {
       _snack(l.backupInvalid('$e'));
+    } finally {
+      await clearPickedCopies();
     }
   }
 

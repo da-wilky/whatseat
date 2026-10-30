@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'dart:math';
 
+import 'package:file_picker/file_picker.dart' show FilePicker;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart' as p;
@@ -33,6 +35,15 @@ Future<String> loadOrCreateDbKey() async {
   final key = List.generate(32, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
   await secureStorage.write(key: name, value: key);
   return key;
+}
+
+/// file_picker keeps a copy of each picked file in the app's cache; for a backup that is the whole diary unencrypted.
+Future<void> clearPickedCopies() async {
+  try {
+    await FilePicker.clearTemporaryFiles();
+  } on PlatformException {
+    // Best effort: copies still named like a backup are also removed at the next start.
+  }
 }
 
 /// Irreversible: deletes the (unreadable) database and its key.

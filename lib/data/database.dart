@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import 'backup_crypto.dart';
 import 'models.dart';
 
 part 'database.g.dart';
@@ -256,7 +257,7 @@ class AppDatabase extends _$AppDatabase {
       });
 
   Future<Map<String, dynamic>> exportBackup() async => {
-        'format': 'whatseat-backup',
+        'format': backupFormat,
         'version': schemaVersion,
         'entries': [
           for (final r in await (select(mealEntries)..where((e) => e.deletedAt.isNull())).get()) r.toJson(),
@@ -267,9 +268,17 @@ class AppDatabase extends _$AppDatabase {
         ],
       };
 
+  // The UI parses days and times without checks; a backup file is untrusted input.
+  static void _checkDay(String day) {
+    final valid = RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(day) && dayKey(parseDayKey(day)) == day;
+    if (!valid) throw FormatException('Invalid day "$day"');
+  }
+
+  static bool _isMinuteOfDay(int minutes) => minutes >= 0 && minutes < 24 * 60;
+
   /// Merges by primary key; the row with the newer `updatedAt` wins.
   Future<int> importBackup(Map<String, dynamic> json) async {
-    if (json['format'] != 'whatseat-backup') throw const FormatException('Not a WhatsEat backup');
+    if (json['format'] != backupFormat) throw const FormatException('Not a WhatsEat backup');
     var changed = 0;
     List<Map<String, dynamic>> rows(String key) =>
         [for (final r in json[key] as List) r as Map<String, dynamic>];
@@ -277,12 +286,17 @@ class AppDatabase extends _$AppDatabase {
     await transaction(() async {
       // Backups from schema 1 lack the column.
       for (final row in rows('entries').map((r) => MealEntry.fromJson({'running': false, ...r}))) {
+        _checkDay(row.day);
+        if (!_isMinuteOfDay(row.startMinutes) || (row.endMinutes != null && !_isMinuteOfDay(row.endMinutes!))) {
+          throw FormatException('Invalid time in entry ${row.id}');
+        }
         final local = await (select(mealEntries)..where((e) => e.id.equals(row.id))).getSingleOrNull();
         if (local != null && !row.updatedAt.isAfter(local.updatedAt)) continue;
         await into(mealEntries).insertOnConflictUpdate(row);
         changed++;
       }
       for (final row in rows('dayNotes').map(DayNote.fromJson)) {
+        _checkDay(row.day);
         final local = await (select(dayNotes)..where((n) => n.day.equals(row.day))).getSingleOrNull();
         if (local != null && !row.updatedAt.isAfter(local.updatedAt)) continue;
         await into(dayNotes).insertOnConflictUpdate(row);

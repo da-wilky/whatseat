@@ -4,7 +4,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import 'app.dart';
+import 'data/backup_crypto.dart';
 import 'l10n/app_localizations.dart';
+import 'providers.dart';
+import 'ui/backup_dialogs.dart';
 
 /// Shown instead of the app when the encrypted database can't be opened, e.g. because its key is gone.
 class RecoveryApp extends StatelessWidget {
@@ -63,17 +66,31 @@ class _RecoveryScreenState extends State<_RecoveryScreen> {
   // The backup is read and checked before anything is deleted, so a wrong file costs nothing.
   Future<void> _restore() async {
     final l = AppLocalizations.of(context);
+    void invalid(Object e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.backupInvalid('$e'))));
+    }
+
     final picked = await FilePicker.pickFile(type: FileType.custom, allowedExtensions: const ['json']);
     if (picked == null) return;
-    final Map<String, dynamic> backup;
+    final Map<String, dynamic>? backup;
     try {
-      backup = jsonDecode(utf8.decode(await picked.readAsBytes())) as Map<String, dynamic>;
-      if (backup['format'] != 'whatseat-backup') throw const FormatException('Not a WhatsEat backup');
+      final json = jsonDecode(utf8.decode(await picked.readAsBytes())) as Map<String, dynamic>;
+      if (!mounted) return;
+      backup = await openBackup(context, json);
+      if (backup != null && backup['format'] != backupFormat) throw const FormatException('Not a WhatsEat backup');
     } on Object catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.backupInvalid('$e'))));
+      invalid(e);
       return;
+    } finally {
+      await clearPickedCopies();
     }
-    await _run(() => widget.onReset(backup));
+    if (backup == null) return;
+    // Only the format is checked up front; a broken row surfaces during the import, after the reset.
+    try {
+      await _run(() => widget.onReset(backup));
+    } on Object catch (e) {
+      invalid(e);
+    }
   }
 
   Future<void> _startFresh() async {

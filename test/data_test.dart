@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:whatseat/data/backup_crypto.dart';
 import 'package:whatseat/data/database.dart';
 import 'package:whatseat/data/models.dart';
 import 'package:whatseat/export/protocol_export.dart';
@@ -61,6 +64,35 @@ void main() {
     await db.saveEntry(_entry('2026-10-29', 8 * 60, const [FoodItem(food: '=HYPERLINK("x")')]));
     final csv = buildProtocolCsv(l, await loadProtocol(db, DateTime(2026, 10, 29), DateTime(2026, 10, 29)));
     expect(csv, contains("'=HYPERLINK"));
+  });
+
+  test('backups with invalid days or times are rejected', () async {
+    final entry = _entry('2026-10-29', 8 * 60, const [FoodItem(food: 'Brot')]);
+    await db.saveEntry(entry);
+    final backup = await db.exportBackup();
+    final row = (backup['entries'] as List).single as Map<String, dynamic>;
+    final other = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(other.close);
+    for (final broken in [
+      {...row, 'day': '2026-13-45'},
+      {...row, 'day': 'x'},
+      {...row, 'startMinutes': 24 * 60},
+    ]) {
+      await expectLater(other.importBackup({...backup, 'entries': [broken]}), throwsFormatException);
+    }
+    expect(await other.select(other.mealEntries).get(), isEmpty);
+  });
+
+  test('encrypted backups round-trip and reject wrong passwords', () async {
+    await db.saveEntry(_entry('2026-10-29', 8 * 60, const [FoodItem(food: 'Brot')]));
+    final backup = await db.exportBackup();
+    final encrypted = await encryptBackup(backup, 'richtig-geheim');
+    expect(jsonEncode(encrypted), isNot(contains('Brot')));
+    // Through JSON, as the file would be read back.
+    final read = jsonDecode(jsonEncode(encrypted)) as Map<String, dynamic>;
+    expect(isEncryptedBackup(read), isTrue);
+    await expectLater(decryptBackup(read, 'falsch'), throwsA(isA<WrongBackupPasswordException>()));
+    expect(await decryptBackup(read, 'richtig-geheim'), backup);
   });
 
   test('legacy amount strings are parsed', () {

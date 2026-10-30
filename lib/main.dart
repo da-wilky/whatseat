@@ -64,7 +64,14 @@ Future<void> _start(SharedPreferencesWithCache prefs, {Map<String, dynamic>? res
   }
   // Undo only lives as long as the snackbar, so anything still marked deleted is gone for good.
   await db.purgeDeleted();
-  if (restore != null) await db.importBackup(restore);
+  if (restore != null) {
+    try {
+      await db.importBackup(restore);
+    } on Object {
+      await db.close();
+      rethrow;
+    }
+  }
   await _excludeFromBackup();
   runApp(ProviderScope(
     overrides: [
