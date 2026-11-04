@@ -132,7 +132,7 @@ Future<ChosenDestination?> _chooseServer(BuildContext context, {required bool re
   }
 }
 
-typedef RemoteRestore = ({Map<String, dynamic> backup, BackupDestination destination, BackupKey? key});
+typedef RemoteRestore = ({Map<String, dynamic> backup, BackupDestination destination, BackupKey key});
 
 /// Lets the user pick and unlock a backup at a destination. Null when cancelled or failed.
 Future<RemoteRestore?> restoreFromBackupLocation(BuildContext context, {BackupDestination? destination}) async {
@@ -173,11 +173,8 @@ Future<RemoteRestore?> restoreFromBackupLocation(BuildContext context, {BackupDe
     if (name == null || !context.mounted) return null;
     final json = await withBusyDialog(context, () => readBackupFile(location, name));
     if (!context.mounted) return null;
-    // Whoever controls the location could otherwise slip in made-up entries without knowing the code.
-    if (!isEncryptedBackup(json)) throw const FormatException('Not encrypted, so it may not come from you');
-    final opened = await openBackupWithKey(context, json, secret: code);
+    final opened = await openBackupWithKey(context, json, fileName: name, secret: code);
     if (opened == null) return null;
-    if (opened.backup['format'] != backupFormat) throw const FormatException('Not a WhatsEat backup');
     return (backup: opened.backup, destination: location, key: opened.key);
   } on Object catch (e) {
     if (context.mounted) _snack(context, l.backupInvalid('$e'));
@@ -276,15 +273,14 @@ class AutoBackupScreen extends ConsumerWidget {
     final int count;
     try {
       count = await ref.read(databaseProvider).importBackup(restored.backup);
-    } on Exception catch (e) {
+    } on Object catch (e) {
       if (context.mounted) _snack(context, l.backupInvalid('$e'));
       return;
     }
     // Restoring with the code proves it is known, so backups can carry on at the same place.
-    final key = restored.key;
     final notifier = ref.read(autoBackupProvider.notifier);
-    if (key != null && ref.read(autoBackupProvider).value?.config == null) {
-      await notifier.enable(AutoBackupConfig(destination: restored.destination, key: key));
+    if (ref.read(autoBackupProvider).value?.config == null) {
+      await notifier.enable(AutoBackupConfig(destination: restored.destination, key: restored.key));
     }
     if (context.mounted) _snack(context, l.backupImported(count));
   }

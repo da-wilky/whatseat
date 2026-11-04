@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 
 import 'app.dart';
 import 'data/auto_backup.dart';
-import 'data/backup_crypto.dart';
 import 'l10n/app_localizations.dart';
 import 'providers.dart';
 import 'ui/auto_backup_screen.dart';
@@ -25,8 +24,8 @@ class RecoveryApp extends StatelessWidget {
   final Object error;
   final VoidCallback onRetry;
 
-  /// Deletes the database; with a backup, it is imported into the new one, and [autoBackup] then saved.
-  /// Without a backup, automatic backup is turned off.
+  /// Deletes the database and turns automatic backup off; with a backup, it is imported into the new one,
+  /// and [autoBackup] then saved.
   final Future<void> Function(Map<String, dynamic>? backup, {AutoBackupConfig? autoBackup}) onReset;
 
   @override
@@ -79,8 +78,7 @@ class _RecoveryScreenState extends State<_RecoveryScreen> {
     try {
       final json = jsonDecode(utf8.decode(await picked.readAsBytes())) as Map<String, dynamic>;
       if (!mounted) return;
-      backup = await openBackup(context, json);
-      if (backup != null && backup['format'] != backupFormat) throw const FormatException('Not a WhatsEat backup');
+      backup = await openBackup(context, json, fileName: picked.name);
     } on Object catch (e) {
       invalid(e);
       return;
@@ -88,7 +86,7 @@ class _RecoveryScreenState extends State<_RecoveryScreen> {
       await clearPickedCopies();
     }
     if (backup == null) return;
-    // Only the format is checked up front; a broken row surfaces during the import, after the reset.
+    // Only the format and creation time are checked up front; a broken row surfaces during the import, after the reset.
     try {
       await _run(() => widget.onReset(backup));
     } on Object catch (e) {
@@ -108,8 +106,7 @@ class _RecoveryScreenState extends State<_RecoveryScreen> {
     if (!mounted) return;
     final restored = await restoreFromBackupLocation(context, destination: configured?.destination);
     if (restored == null) return;
-    final key = restored.key;
-    final autoBackup = key == null ? null : AutoBackupConfig(destination: restored.destination, key: key);
+    final autoBackup = AutoBackupConfig(destination: restored.destination, key: restored.key);
     try {
       await _run(() => widget.onReset(restored.backup, autoBackup: autoBackup));
     } on Object catch (e) {

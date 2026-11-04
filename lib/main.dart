@@ -20,7 +20,7 @@ Future<void> main() async {
   await _start(prefs);
 }
 
-// Shared exports stay in the cache after the share sheet closes; the backup is an unencrypted copy of everything.
+// Shared exports stay in the cache after the share sheet closes; protocol exports are unencrypted.
 // Deleting right after sharing could break the receiving app while it still reads the file.
 Future<void> _deleteOldExports() async {
   final exportName = RegExp(r'^(whatseat-backup-.*\.json|essprotokoll_.*\.(csv|pdf))$');
@@ -62,7 +62,9 @@ Future<void> _forgetAutoBackup(SharedPreferencesWithCache prefs) async {
 Future<void> _start(SharedPreferencesWithCache prefs,
     {Map<String, dynamic>? restore, AutoBackupConfig? autoBackup}) async {
   AppDatabase? db;
+  final bool fresh;
   try {
+    fresh = !await (await databaseFiles()).first.exists();
     db = AppDatabase(await loadOrCreateDbKey());
     // Opening is lazy; a wrong or lost key only surfaces on the first query.
     await db.customSelect('SELECT count(*) FROM sqlite_master').get();
@@ -74,13 +76,14 @@ Future<void> _start(SharedPreferencesWithCache prefs,
       onRetry: () => _start(prefs),
       onReset: (backup, {autoBackup}) async {
         await resetDatabase();
-        // Otherwise the empty diary keeps backing up in the old series, whose full backups get pruned within a week.
-        if (backup == null) await _forgetAutoBackup(prefs);
         await _start(prefs, restore: backup, autoBackup: autoBackup);
       },
     ));
     return;
   }
+  // A configuration left from before (after a reset, or an iOS reinstall: the Keychain outlives the app) would keep
+  // backing up the empty diary in the old series, whose full backups get pruned within a week.
+  if (fresh) await _forgetAutoBackup(prefs);
   // Undo only lives as long as the snackbar, so anything still marked deleted is gone for good.
   await db.purgeDeleted();
   if (restore != null) {

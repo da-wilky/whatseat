@@ -259,6 +259,7 @@ class AppDatabase extends _$AppDatabase {
   Future<Map<String, dynamic>> exportBackup() async => {
         'format': backupFormat,
         'version': schemaVersion,
+        'created': DateTime.now().toUtc().toIso8601String(),
         'entries': [
           for (final r in await (select(mealEntries)..where((e) => e.deletedAt.isNull())).get()) r.toJson(),
         ],
@@ -276,9 +277,12 @@ class AppDatabase extends _$AppDatabase {
 
   static bool _isMinuteOfDay(int minutes) => minutes >= 0 && minutes < 24 * 60;
 
+  static bool _isPercent(int? value) => value == null || (value >= 0 && value <= 100);
+
   /// Merges by primary key; the row with the newer `updatedAt` wins.
   Future<int> importBackup(Map<String, dynamic> json) async {
     if (json['format'] != backupFormat) throw const FormatException('Not a WhatsEat backup');
+    backupCreated(json);
     var changed = 0;
     List<Map<String, dynamic>> rows(String key) =>
         [for (final r in json[key] as List) r as Map<String, dynamic>];
@@ -289,6 +293,9 @@ class AppDatabase extends _$AppDatabase {
         _checkDay(row.day);
         if (!_isMinuteOfDay(row.startMinutes) || (row.endMinutes != null && !_isMinuteOfDay(row.endMinutes!))) {
           throw FormatException('Invalid time in entry ${row.id}');
+        }
+        if (!_isPercent(row.hunger) || !_isPercent(row.satiety)) {
+          throw FormatException('Invalid hunger or satiety in entry ${row.id}');
         }
         final local = await (select(mealEntries)..where((e) => e.id.equals(row.id))).getSingleOrNull();
         if (local != null && !row.updatedAt.isAfter(local.updatedAt)) continue;

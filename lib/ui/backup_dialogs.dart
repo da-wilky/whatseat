@@ -1,25 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
+import '../data/auto_backup.dart';
 import '../data/backup_crypto.dart';
+import '../data/models.dart';
 import '../l10n/app_localizations.dart';
 
 const _minPasswordLength = 8;
 
 enum _Mode { export, autoBackup, unlock }
 
-/// Returns the password, '' once the user confirmed exporting without one, or null when cancelled.
-Future<String?> askExportPassword(BuildContext context) async {
-  while (true) {
-    if (!context.mounted) return null;
-    final password = await showDialog<String>(
+/// Null when cancelled.
+Future<String?> askExportPassword(BuildContext context) => showDialog<String>(
       context: context,
       builder: (_) => const _PasswordDialog(mode: _Mode.export),
     );
-    if (password == null || password.isNotEmpty) return password;
-    if (!context.mounted) return null;
-    if (await _confirmUnencrypted(context)) return '';
-  }
-}
 
 /// Null when cancelled.
 Future<String?> askAutoBackupPassword(BuildContext context) => showDialog<String>(
@@ -27,31 +22,9 @@ Future<String?> askAutoBackupPassword(BuildContext context) => showDialog<String
       builder: (_) => const _PasswordDialog(mode: _Mode.autoBackup),
     );
 
-Future<bool> _confirmUnencrypted(BuildContext context) async {
-  final l = AppLocalizations.of(context);
-  final scheme = Theme.of(context).colorScheme;
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      icon: Icon(Icons.warning_amber_rounded, color: scheme.error),
-      title: Text(l.backupUnencryptedTitle),
-      content: Text(l.backupUnencryptedRisk),
-      actions: [
-        TextButton(
-          style: TextButton.styleFrom(foregroundColor: scheme.error),
-          onPressed: () => Navigator.pop(context, true),
-          child: Text(l.backupUnencryptedConfirm),
-        ),
-        FilledButton(onPressed: () => Navigator.pop(context, false), child: Text(l.backupSetPassword)),
-      ],
-    ),
-  );
-  return ok ?? false;
-}
-
-/// Plain backups pass through; encrypted ones ask for the password until it fits. Null when cancelled.
-Future<Map<String, dynamic>?> openBackup(BuildContext context, Map<String, dynamic> json) async =>
-    (await openBackupWithKey(context, json))?.backup;
+/// Asks for the password until it fits, then has the user confirm when the backup was made. Null when cancelled.
+Future<Map<String, dynamic>?> openBackup(BuildContext context, Map<String, dynamic> json, {required String fileName}) async =>
+    (await openBackupWithKey(context, json, fileName: fileName))?.backup;
 
 /// Null when cancelled.
 Future<String?> askRecoveryCode(BuildContext context) => showDialog<String>(
@@ -59,11 +32,12 @@ Future<String?> askRecoveryCode(BuildContext context) => showDialog<String>(
       builder: (_) => const _PasswordDialog(mode: _Mode.unlock, recoveryCode: true),
     );
 
-/// Like [openBackup], also returning the key of an encrypted backup.
+/// Like [openBackup], also returning the key.
 /// A known [secret], such as the code just used to log in, is tried before asking.
-Future<({Map<String, dynamic> backup, BackupKey? key})?> openBackupWithKey(BuildContext context, Map<String, dynamic> json,
-    {String? secret}) async {
-  if (!isEncryptedBackup(json)) return (backup: json, key: null);
+/// Unencrypted files are refused: whoever stored or sent them could have made up their content.
+Future<({Map<String, dynamic> backup, BackupKey key})?> openBackupWithKey(BuildContext context, Map<String, dynamic> json,
+    {required String fileName, String? secret}) async {
+  if (!isEncryptedBackup(json)) throw const FormatException('Not an encrypted WhatsEat backup');
   final recoveryCode = usesRecoveryCode(json);
   var wrong = false;
   var known = secret;
@@ -76,15 +50,55 @@ Future<({Map<String, dynamic> backup, BackupKey? key})?> openBackupWithKey(Build
         );
     known = null;
     if (password == null || !context.mounted) return null;
+    final ({Map<String, dynamic> backup, BackupKey key}) opened;
     try {
-      return await withBusyDialog(context, () async {
+      opened = await withBusyDialog(context, () async {
         final key = await backupKeyFor(json, password);
         return (backup: await decryptBackupWithKey(json, key), key: key);
       });
     } on WrongBackupPasswordException {
       wrong = true;
+      continue;
     }
+    if (opened.backup['format'] != backupFormat) throw const FormatException('Not a WhatsEat backup');
+    final created = backupCreated(opened.backup);
+    if (!context.mounted || !await _confirmBackupTime(context, created, fileName)) return null;
+    return opened;
   }
+}
+
+/// The time inside the encrypted backup is the one to trust; the file name can be changed by whoever stores it.
+Future<bool> _confirmBackupTime(BuildContext context, DateTime created, String fileName) async {
+  final l = AppLocalizations.of(context);
+  final scheme = Theme.of(context).colorScheme;
+  final local = created.toLocal();
+  final named = isBackupName(fileName) ? backupDay(fileName) : null;
+  final mismatch = named != null && dayKey(named) != dayKey(local);
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      scrollable: true,
+      icon: mismatch ? Icon(Icons.warning_amber_rounded, color: scheme.error) : null,
+      title: Text(l.backupRestoreConfirm),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l.backupCreatedAt(DateFormat.yMMMMEEEEd(l.localeName).add_Hm().format(local))),
+          if (mismatch) ...[
+            const SizedBox(height: 12),
+            Text(l.backupDateMismatch(DateFormat.yMMMMEEEEd(l.localeName).format(named)),
+                style: TextStyle(color: scheme.error)),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.cancel)),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(l.backupRestore)),
+      ],
+    ),
+  );
+  return ok ?? false;
 }
 
 /// Blocks input while [task] runs, e.g. the second or two of key derivation.
@@ -209,13 +223,6 @@ class _PasswordDialogState extends State<_PasswordDialog> {
               onChanged: _clearErrors,
               decoration: decoration(l.passwordRepeat, _repeatError),
             ),
-            if (widget.mode == _Mode.export) ...[
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(onPressed: () => Navigator.pop(context, ''), child: Text(l.backupWithoutPassword)),
-              ),
-            ],
           ],
         ],
       ),

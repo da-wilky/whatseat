@@ -285,6 +285,72 @@ func TestRegistrationRateLimit(t *testing.T) {
 	expect(t, status, http.StatusNoContent, "existing account logs in despite the limit")
 }
 
+func TestRegistrationRateLimitPerClient(t *testing.T) {
+	server := newTestServer(t, limits{registerPerHour: 1, maxAccounts: 10, maxBackups: 1, maxBackupBytes: 16, clientIPHeader: "X-Real-IP"})
+	register := func(id, client string) int {
+		t.Helper()
+		req, err := http.NewRequest("POST", server.URL+"/v1/register", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Authorization", "Bearer "+strings.Repeat(id, 32)+"."+token)
+		if client != "" {
+			req.Header.Set("X-Real-IP", client)
+		}
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		return res.StatusCode
+	}
+	expect(t, register("a", "192.0.2.1"), http.StatusCreated, "first client")
+	expect(t, register("b", "192.0.2.1"), http.StatusTooManyRequests, "first client again")
+	expect(t, register("c", "192.0.2.2"), http.StatusCreated, "second client")
+	expect(t, register("d", "2001:db8::1"), http.StatusCreated, "IPv6 client")
+	expect(t, register("e", "2001:db8::2"), http.StatusTooManyRequests, "same IPv6 /64")
+	expect(t, register("f", ""), http.StatusInternalServerError, "proxy didn't set the header")
+}
+
+func TestOneUploadPerAccount(t *testing.T) {
+	server := newTestServer(t, defaultLimits)
+	auth := account + "." + token
+	do(t, server, "POST", "/v1/register", auth, "")
+
+	body, slow := io.Pipe()
+	req, err := http.NewRequest("PUT", server.URL+backup, body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer "+auth)
+	done := make(chan int)
+	go func() {
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			done <- 0
+			return
+		}
+		res.Body.Close()
+		done <- res.StatusCode
+	}()
+	slow.Write([]byte("{"))
+	// The first upload never finishes on its own, so it takes the account's slot sooner or later.
+	for deadline := time.Now().Add(5 * time.Second); ; {
+		status, _ := do(t, server, "PUT", "/v1/backups/whatseat-backup-2026-11-01.json", auth, "{}")
+		if status == http.StatusTooManyRequests {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("second upload while one runs: status %d", status)
+		}
+	}
+	slow.Write([]byte("}"))
+	slow.Close()
+	expect(t, <-done, http.StatusNoContent, "first upload")
+	status, _ := do(t, server, "PUT", "/v1/backups/whatseat-backup-2026-11-01.json", auth, "{}")
+	expect(t, status, http.StatusNoContent, "upload after the first finished")
+}
+
 func TestPurgeAfterClockWentBack(t *testing.T) {
 	s, err := openStore(filepath.Join(t.TempDir(), "test.sqlite"))
 	if err != nil {

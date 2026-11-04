@@ -57,7 +57,9 @@ Future<void> forgetAutoBackup(SharedPreferencesWithCache prefs, AutoBackupConfig
 
 /// Backup file names, newest first.
 Future<List<String>> listBackups(BackupDestination destination) async =>
-    (await destination.list()).where(_backupName.hasMatch).toList()..sort((a, b) => b.compareTo(a));
+    (await destination.list()).where(isBackupName).toList()..sort((a, b) => b.compareTo(a));
+
+bool isBackupName(String name) => _backupName.hasMatch(name);
 
 DateTime backupDay(String name) => parseDayKey(_backupName.firstMatch(name)!.group(1)!);
 

@@ -66,7 +66,7 @@ void main() {
     expect(csv, contains("'=HYPERLINK"));
   });
 
-  test('backups with invalid days or times are rejected', () async {
+  test('backups with invalid days, times or percentages are rejected', () async {
     final entry = _entry('2026-10-29', 8 * 60, const [FoodItem(food: 'Brot')]);
     await db.saveEntry(entry);
     final backup = await db.exportBackup();
@@ -77,10 +77,21 @@ void main() {
       {...row, 'day': '2026-13-45'},
       {...row, 'day': 'x'},
       {...row, 'startMinutes': 24 * 60},
+      {...row, 'hunger': 101},
+      {...row, 'satiety': -1},
     ]) {
       await expectLater(other.importBackup({...backup, 'entries': [broken]}), throwsFormatException);
     }
     expect(await other.select(other.mealEntries).get(), isEmpty);
+  });
+
+  test('backups carry their creation time, and those without are rejected', () async {
+    final backup = await db.exportBackup();
+    expect(backupCreated(backup).difference(DateTime.now()).abs(), lessThan(const Duration(minutes: 1)));
+    final other = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(other.close);
+    await expectLater(other.importBackup({...backup}..remove('created')), throwsFormatException);
+    await expectLater(other.importBackup({...backup, 'created': 'yesterday'}), throwsFormatException);
   });
 
   test('encrypted backups round-trip and reject wrong passwords', () async {

@@ -96,7 +96,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       final json = jsonDecode(utf8.decode(await picked.readAsBytes())) as Map<String, dynamic>;
       if (!mounted) return;
-      final backup = await openBackup(context, json);
+      final backup = await openBackup(context, json, fileName: picked.name);
       if (backup == null) return;
       final count = await ref.read(databaseProvider).importBackup(backup);
       _snack(l.backupImported(count));

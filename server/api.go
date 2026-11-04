@@ -7,9 +7,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
+	"net/netip"
 	"regexp"
 	"strings"
 	"sync"
@@ -23,11 +26,15 @@ type limits struct {
 	inviteOnly     bool
 	// Zero keeps accounts forever.
 	inactiveDays int
-	// New accounts per hour across all clients; behind a reverse proxy every client has the same address.
+	// New accounts per hour per client address.
 	registerPerHour int
+	// Set by the reverse proxy to the client's address, which the connection only shows as the proxy's.
+	// Empty uses the connection's address.
+	clientIPHeader string
 }
 
 // Uploads are held in memory until stored, and storing is serialised; this bounds the memory they take.
+// Each account gets at most one, so a single slow client can't take all of them.
 const maxConcurrentUploads = 4
 
 // info is public, so the app can warn about deletion and ask for an invite before registering.
@@ -42,7 +49,8 @@ type api struct {
 	uploads chan struct{}
 
 	mu            sync.Mutex
-	registrations []time.Time
+	registrations map[string][]time.Time
+	uploading     map[string]bool
 }
 
 var (
@@ -54,7 +62,13 @@ var (
 type ctxKey struct{}
 
 func newAPI(s *store, l limits) http.Handler {
-	a := &api{store: s, limits: l, uploads: make(chan struct{}, maxConcurrentUploads)}
+	a := &api{
+		store:         s,
+		limits:        l,
+		uploads:       make(chan struct{}, maxConcurrentUploads),
+		registrations: map[string][]time.Time{},
+		uploading:     map[string]bool{},
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	mux.HandleFunc("GET /v1/info", a.info)
@@ -118,7 +132,12 @@ func (a *api) register(w http.ResponseWriter, r *http.Request) {
 	if a.answerExisting(w, r, account, hash) {
 		return
 	}
-	if !a.allowRegistration(time.Now()) {
+	client, err := a.clientAddress(r)
+	if err != nil {
+		internalError(w, err)
+		return
+	}
+	if !a.allowRegistration(client, time.Now()) {
 		w.Header().Set("Retry-After", "3600")
 		http.Error(w, "too many new accounts, try again later", http.StatusTooManyRequests)
 		return
@@ -171,23 +190,65 @@ func (a *api) answerExisting(w http.ResponseWriter, r *http.Request, account str
 	return true
 }
 
-// allowRegistration counts an attempt against the hourly limit, failed ones included,
+// clientAddress groups IPv6 clients by /64, the block one machine usually gets.
+func (a *api) clientAddress(r *http.Request) (string, error) {
+	raw := r.RemoteAddr
+	if a.limits.clientIPHeader != "" {
+		raw = r.Header.Get(a.limits.clientIPHeader)
+	} else if host, _, err := net.SplitHostPort(raw); err == nil {
+		raw = host
+	}
+	addr, err := netip.ParseAddr(raw)
+	if err != nil {
+		return "", fmt.Errorf("client address %q: %w; the reverse proxy must set %s to the client's IP",
+			raw, err, a.limits.clientIPHeader)
+	}
+	addr = addr.Unmap().WithZone("")
+	if addr.Is6() {
+		return netip.PrefixFrom(addr, 64).Masked().String(), nil
+	}
+	return addr.String(), nil
+}
+
+// allowRegistration counts an attempt against the client's hourly limit, failed ones included,
 // so guessing invites is rate limited too.
-func (a *api) allowRegistration(now time.Time) bool {
+func (a *api) allowRegistration(client string, now time.Time) bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	recent := a.registrations[:0]
-	for _, t := range a.registrations {
-		if now.Sub(t) < time.Hour {
-			recent = append(recent, t)
+	for c, times := range a.registrations {
+		recent := times[:0]
+		for _, t := range times {
+			if now.Sub(t) < time.Hour {
+				recent = append(recent, t)
+			}
+		}
+		if len(recent) == 0 {
+			delete(a.registrations, c)
+		} else {
+			a.registrations[c] = recent
 		}
 	}
-	a.registrations = recent
-	if len(recent) >= a.limits.registerPerHour {
+	if len(a.registrations[client]) >= a.limits.registerPerHour {
 		return false
 	}
-	a.registrations = append(a.registrations, now)
+	a.registrations[client] = append(a.registrations[client], now)
 	return true
+}
+
+func (a *api) startUpload(account string) bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.uploading[account] {
+		return false
+	}
+	a.uploading[account] = true
+	return true
+}
+
+func (a *api) endUpload(account string) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	delete(a.uploading, account)
 }
 
 func (a *api) deleteAccount(w http.ResponseWriter, r *http.Request) {
@@ -258,6 +319,11 @@ func (a *api) read(w http.ResponseWriter, r *http.Request, account, name string)
 }
 
 func (a *api) write(w http.ResponseWriter, r *http.Request, account, name string) {
+	if !a.startUpload(account) {
+		http.Error(w, "another upload is running", http.StatusTooManyRequests)
+		return
+	}
+	defer a.endUpload(account)
 	select {
 	case a.uploads <- struct{}{}:
 		defer func() { <-a.uploads }()

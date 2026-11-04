@@ -219,11 +219,6 @@
   },
   "passwordMismatch": "Die Passwörter stimmen nicht überein",
   "backupEncrypt": "Verschlüsseln",
-  "backupWithoutPassword": "Ohne Passwort",
-  "backupUnencryptedTitle": "Wirklich ohne Passwort?",
-  "backupUnencryptedRisk": "Ohne Passwort kann jede Person und jede App, die an die Datei kommt, dein komplettes Essprotokoll lesen – mit allen Notizen, Gedanken und Gefühlen.\n\nDas passiert schneller als gedacht: über Chats und E-Mails, automatische Cloud-Uploads, den Download-Ordner oder ein verlorenes Gerät.",
-  "backupUnencryptedConfirm": "Trotzdem ohne Passwort",
-  "backupSetPassword": "Passwort festlegen",
   "backupLockedTitle": "Verschlüsseltes Backup",
   "backupLockedHint": "Gib das Passwort ein, mit dem dieses Backup erstellt wurde.",
   "backupWrongPassword": "Falsches Passwort",
@@ -318,6 +313,23 @@
     }
   },
   "backupNoneFound": "Keine Backups an diesem Speicherort gefunden",
+  "backupRestoreConfirm": "Dieses Backup wiederherstellen?",
+  "backupCreatedAt": "Gesichert am {date}.",
+  "@backupCreatedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "backupDateMismatch": "Achtung: Laut Dateiname ist es vom {day}. Die Datei wurde womöglich umbenannt oder ausgetauscht – stelle sie nur wieder her, wenn du damit gerechnet hast.",
+  "@backupDateMismatch": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
   "backupChoose": "Backup wählen",
   "backupLocationHasBackups": "Hier liegen schon Backups",
   "backupLocationHasBackupsHint": "Wenn das ein neues Gerät ist, stelle zuerst das Backup wieder her – sonst ersetzt das heutige Backup dieses Geräts das deines alten Geräts.",

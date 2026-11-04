@@ -43,7 +43,8 @@ func main() {
 	maxAccounts := flag.Int("max-accounts", 100, "accounts that may exist with open registration; ignored with -invite-only")
 	maxBackups := flag.Int("max-backups", 10, "backup files per account; the app keeps 7")
 	maxBackupBytes := flag.Int64("max-backup-bytes", 5<<20, "size limit per backup file")
-	registerPerHour := flag.Int("register-per-hour", 10, "new accounts per hour, failed attempts included")
+	registerPerHour := flag.Int("register-per-hour", 10, "new accounts per hour and client address, failed attempts included")
+	clientIPHeader := flag.String("client-ip-header", "X-Real-IP", "header the reverse proxy sets to the client's address; empty uses the connection's")
 	inviteOnly := flag.Bool("invite-only", false, "register only with an invite from 'whatseat-server invite'")
 	inactiveDays := flag.Int("inactive-days", 365, "delete accounts and their backups after this many days without a login; 0 keeps them")
 	purgeInterval := flag.Duration("purge-interval", 24*time.Hour, "how often inactive accounts and expired invites are deleted; also once at startup")
@@ -72,6 +73,7 @@ func main() {
 			inviteOnly:      *inviteOnly,
 			inactiveDays:    *inactiveDays,
 			registerPerHour: *registerPerHour,
+			clientIPHeader:  *clientIPHeader,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       2 * time.Minute,

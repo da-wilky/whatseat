@@ -518,22 +518,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get backupEncrypt => 'Verschlüsseln';
 
   @override
-  String get backupWithoutPassword => 'Ohne Passwort';
-
-  @override
-  String get backupUnencryptedTitle => 'Wirklich ohne Passwort?';
-
-  @override
-  String get backupUnencryptedRisk =>
-      'Ohne Passwort kann jede Person und jede App, die an die Datei kommt, dein komplettes Essprotokoll lesen – mit allen Notizen, Gedanken und Gefühlen.\n\nDas passiert schneller als gedacht: über Chats und E-Mails, automatische Cloud-Uploads, den Download-Ordner oder ein verlorenes Gerät.';
-
-  @override
-  String get backupUnencryptedConfirm => 'Trotzdem ohne Passwort';
-
-  @override
-  String get backupSetPassword => 'Passwort festlegen';
-
-  @override
   String get backupLockedTitle => 'Verschlüsseltes Backup';
 
   @override
@@ -692,6 +676,19 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get backupNoneFound => 'Keine Backups an diesem Speicherort gefunden';
+
+  @override
+  String get backupRestoreConfirm => 'Dieses Backup wiederherstellen?';
+
+  @override
+  String backupCreatedAt(String date) {
+    return 'Gesichert am $date.';
+  }
+
+  @override
+  String backupDateMismatch(String day) {
+    return 'Achtung: Laut Dateiname ist es vom $day. Die Datei wurde womöglich umbenannt oder ausgetauscht – stelle sie nur wieder her, wenn du damit gerechnet hast.';
+  }
 
   @override
   String get backupChoose => 'Backup wählen';

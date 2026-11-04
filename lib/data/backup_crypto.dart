@@ -16,6 +16,14 @@ const _parallelism = 1;
 
 bool isEncryptedBackup(Map<String, dynamic> json) => json['format'] == encryptedBackupFormat;
 
+/// When the backup was made, from inside it, so encryption vouches for it.
+DateTime backupCreated(Map<String, dynamic> backup) {
+  final created = backup['created'];
+  final parsed = created is String ? DateTime.tryParse(created) : null;
+  if (parsed == null) throw const FormatException('Backup without creation time');
+  return parsed;
+}
+
 /// Unambiguous when read aloud or handwritten: no 0/O, 1/I/L.
 const _codeAlphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const _codeLength = 24;

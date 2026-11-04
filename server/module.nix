@@ -26,6 +26,15 @@ in
       default = "127.0.0.1:8470";
       description = "Address to listen on. Serves plain HTTP; the app requires HTTPS, so put a TLS reverse proxy in front.";
     };
+    clientIpHeader = lib.mkOption {
+      type = lib.types.str;
+      default = "X-Real-IP";
+      description = ''
+        Header the reverse proxy sets to the client's address, for the per-client registration limit.
+        The proxy must overwrite it, e.g. nginx `proxy_set_header X-Real-IP $remote_addr;`; registration fails without it.
+        Empty uses the connection's address, only right without a proxy.
+      '';
+    };
     publicUrl = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
@@ -56,7 +65,7 @@ in
     registerPerHour = lib.mkOption {
       type = lib.types.ints.unsigned;
       default = 10;
-      description = "New accounts per hour across all clients, failed attempts included, so invites can't be guessed at speed either.";
+      description = "New accounts per hour and client address (IPv6 per /64), failed attempts included, so invites can't be guessed at speed either.";
     };
     maxBackups = lib.mkOption {
       type = lib.types.ints.positive;
@@ -91,6 +100,7 @@ in
         WHATSEAT_MAX_BACKUPS = toString cfg.maxBackups;
         WHATSEAT_MAX_BACKUP_BYTES = toString cfg.maxBackupBytes;
         WHATSEAT_REGISTER_PER_HOUR = toString cfg.registerPerHour;
+        WHATSEAT_CLIENT_IP_HEADER = cfg.clientIpHeader;
       };
       serviceConfig = {
         ExecStart = lib.getExe cfg.package;

@@ -1040,36 +1040,6 @@ abstract class AppLocalizations {
   /// **'Verschlüsseln'**
   String get backupEncrypt;
 
-  /// No description provided for @backupWithoutPassword.
-  ///
-  /// In de, this message translates to:
-  /// **'Ohne Passwort'**
-  String get backupWithoutPassword;
-
-  /// No description provided for @backupUnencryptedTitle.
-  ///
-  /// In de, this message translates to:
-  /// **'Wirklich ohne Passwort?'**
-  String get backupUnencryptedTitle;
-
-  /// No description provided for @backupUnencryptedRisk.
-  ///
-  /// In de, this message translates to:
-  /// **'Ohne Passwort kann jede Person und jede App, die an die Datei kommt, dein komplettes Essprotokoll lesen – mit allen Notizen, Gedanken und Gefühlen.\n\nDas passiert schneller als gedacht: über Chats und E-Mails, automatische Cloud-Uploads, den Download-Ordner oder ein verlorenes Gerät.'**
-  String get backupUnencryptedRisk;
-
-  /// No description provided for @backupUnencryptedConfirm.
-  ///
-  /// In de, this message translates to:
-  /// **'Trotzdem ohne Passwort'**
-  String get backupUnencryptedConfirm;
-
-  /// No description provided for @backupSetPassword.
-  ///
-  /// In de, this message translates to:
-  /// **'Passwort festlegen'**
-  String get backupSetPassword;
-
   /// No description provided for @backupLockedTitle.
   ///
   /// In de, this message translates to:
@@ -1339,6 +1309,24 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Keine Backups an diesem Speicherort gefunden'**
   String get backupNoneFound;
+
+  /// No description provided for @backupRestoreConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Dieses Backup wiederherstellen?'**
+  String get backupRestoreConfirm;
+
+  /// No description provided for @backupCreatedAt.
+  ///
+  /// In de, this message translates to:
+  /// **'Gesichert am {date}.'**
+  String backupCreatedAt(String date);
+
+  /// No description provided for @backupDateMismatch.
+  ///
+  /// In de, this message translates to:
+  /// **'Achtung: Laut Dateiname ist es vom {day}. Die Datei wurde womöglich umbenannt oder ausgetauscht – stelle sie nur wieder her, wenn du damit gerechnet hast.'**
+  String backupDateMismatch(String day);
 
   /// No description provided for @backupChoose.
   ///
