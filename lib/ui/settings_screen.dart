@@ -8,11 +8,13 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../data/auto_backup.dart';
 import '../data/backup_crypto.dart';
 import '../data/models.dart';
 import '../l10n/app_localizations.dart';
 import '../lock/app_lock.dart';
 import '../providers.dart';
+import 'auto_backup_screen.dart';
 import 'backup_dialogs.dart';
 import 'entry_editor.dart';
 import 'export_screen.dart';
@@ -194,6 +196,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             leading: const Icon(Icons.bookmarks_outlined),
             title: Text(l.templates),
             onTap: () => push(const TemplatesScreen()),
+          ),
+          ListTile(
+            leading: const Icon(Icons.cloud_sync_outlined),
+            title: Text(l.autoBackup),
+            subtitle: Text(ref.watch(autoBackupProvider).value?.config?.destination.label ?? l.autoBackupOff),
+            onTap: () => push(const AutoBackupScreen()),
           ),
           ListTile(
             leading: const Icon(Icons.backup_outlined),

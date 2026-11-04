@@ -428,7 +428,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get recoveryStartFreshConfirm =>
-      'Die unlesbaren Daten werden endgültig gelöscht.';
+      'Die unlesbaren Daten werden endgültig gelöscht.\n\nEin automatisches Backup wird dabei ausgeschaltet, damit es deine alten Backups nicht nach und nach ersetzt. Sie bleiben am Speicherort und lassen sich später wiederherstellen.';
 
   @override
   String get startEating => 'Essen beginnen';
@@ -542,4 +542,210 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get backupWrongPassword => 'Falsches Passwort';
+
+  @override
+  String get autoBackup => 'Automatisches Backup';
+
+  @override
+  String get autoBackupOff => 'Aus';
+
+  @override
+  String get autoBackupIntro =>
+      'Sichert dein Protokoll nach Änderungen verschlüsselt an einem Ort deiner Wahl – etwa in deiner Nextcloud oder einem Cloud-Ordner. Nur mit deinem Wiederherstellungscode oder Passwort lässt es sich öffnen, auch nicht vom Anbieter des Speicherorts. Die letzten 7 Tage bleiben erhalten.';
+
+  @override
+  String get autoBackupSetUp => 'Automatisches Backup einrichten';
+
+  @override
+  String get autoBackupNever => 'Noch kein Backup';
+
+  @override
+  String autoBackupLast(String time) {
+    return 'Letztes Backup: $time';
+  }
+
+  @override
+  String get autoBackupNow => 'Jetzt sichern';
+
+  @override
+  String get autoBackupDisable => 'Automatisches Backup ausschalten';
+
+  @override
+  String get autoBackupDisableHint =>
+      'Schlüssel und Zugangsdaten werden von diesem Gerät gelöscht. Ohne Haken bleiben die Backups am Speicherort und lassen sich mit dem Code weiter wiederherstellen.';
+
+  @override
+  String get autoBackupDeleteFiles =>
+      'Auch die Backups dieses Geräts am Speicherort löschen';
+
+  @override
+  String get autoBackupDeleteAccount =>
+      'Auch Konto und alle Backups auf dem Server löschen';
+
+  @override
+  String autoBackupDeleteFailed(String error) {
+    return 'Löschen fehlgeschlagen, Backup bleibt eingeschaltet: $error';
+  }
+
+  @override
+  String get autoBackupPasswordTitle => 'Backup-Passwort festlegen';
+
+  @override
+  String autoBackupPasswordHint(int min) {
+    return 'Wer den Speicherort betreibt, kann beliebig oft raten. Deshalb mindestens $min Zeichen mit Groß- und Kleinbuchstaben, Ziffern oder Sonderzeichen – oder ein langer Satz ab 24 Zeichen. Ein vergessenes Passwort lässt sich nicht zurücksetzen.';
+  }
+
+  @override
+  String get passwordTooWeak => 'Zu schwach – siehe Hinweis oben';
+
+  @override
+  String get backupCodeLockedHint =>
+      'Gib den Wiederherstellungscode ein, den du beim Einrichten des automatischen Backups notiert hast.';
+
+  @override
+  String get backupWrongCode => 'Falscher Code';
+
+  @override
+  String get recoveryCode => 'Wiederherstellungscode';
+
+  @override
+  String get recoveryCodeHint =>
+      'Notiere diesen Code und bewahre ihn sicher auf, getrennt von deinem Handy. Er wird nur jetzt angezeigt. Ohne ihn lässt sich kein Backup wiederherstellen.';
+
+  @override
+  String get recoveryCodeSaved => 'Ich habe den Code notiert';
+
+  @override
+  String get backupLocation => 'Speicherort';
+
+  @override
+  String get backupLocationServer => 'WhatsEat-Server';
+
+  @override
+  String get backupLocationServerHint =>
+      'Eigener Server, Anmeldung nur mit dem Wiederherstellungscode';
+
+  @override
+  String get serverUrl => 'Server-Adresse oder Einladungslink';
+
+  @override
+  String get serverInvite => 'Einladungscode';
+
+  @override
+  String get serverInviteLabel => 'Vom Betreiber des Servers erhalten';
+
+  @override
+  String get serverInactivityTitle => 'Inaktive Konten werden gelöscht';
+
+  @override
+  String serverInactivityWarning(int days) {
+    return 'Dieser Server löscht Konten nach $days Tagen ohne Aktivität – mitsamt allen Backups darauf.\n\nAls Aktivität zählt jeder Start der App und jedes Backup. Das Melden beim App-Start kannst du in den Einstellungen abschalten.';
+  }
+
+  @override
+  String get understood => 'Verstanden';
+
+  @override
+  String get keepAlive => 'Konto aktiv halten';
+
+  @override
+  String get keepAliveHint =>
+      'Meldet sich bei jedem App-Start beim Server, auch ohne neue Einträge';
+
+  @override
+  String serverInactivityNote(int days) {
+    return 'Der Server löscht Konten nach $days Tagen ohne Aktivität mitsamt allen Backups.';
+  }
+
+  @override
+  String get keepAliveOffTitle => 'Nicht mehr beim App-Start melden?';
+
+  @override
+  String keepAliveOffWarning(int days) {
+    return 'Dann zählen nur noch Backups nach Änderungen als Aktivität. Trägst du $days Tage lang nichts ein, löscht der Server dein Konto und alle Backups darauf.';
+  }
+
+  @override
+  String get keepAliveOffHint =>
+      'Dann zählen nur noch Backups nach Änderungen als Aktivität.';
+
+  @override
+  String get keepAliveOffConfirm => 'Abschalten';
+
+  @override
+  String get backupLocationWebDav => 'WebDAV';
+
+  @override
+  String get backupLocationWebDavHint => 'Nextcloud, ownCloud, NAS';
+
+  @override
+  String get backupLocationFolder => 'Ordner';
+
+  @override
+  String get backupLocationFolderHint =>
+      'Auf dem Gerät oder über eine Cloud-App, z. B. Google Drive oder iCloud Drive';
+
+  @override
+  String backupLocationFailed(String error) {
+    return 'Speicherort nicht erreichbar: $error';
+  }
+
+  @override
+  String get backupNoneFound => 'Keine Backups an diesem Speicherort gefunden';
+
+  @override
+  String get backupChoose => 'Backup wählen';
+
+  @override
+  String get backupLocationHasBackups => 'Hier liegen schon Backups';
+
+  @override
+  String get backupLocationHasBackupsHint =>
+      'Wenn das ein neues Gerät ist, stelle zuerst das Backup wieder her – sonst ersetzt das heutige Backup dieses Geräts das deines alten Geräts.';
+
+  @override
+  String get backupContinueSetup => 'Trotzdem einrichten';
+
+  @override
+  String get backupSecretTitle => 'Backup schützen mit …';
+
+  @override
+  String get backupSecretCode => 'Wiederherstellungscode';
+
+  @override
+  String get backupSecretCodeHint =>
+      'Empfohlen. Ein zufälliger Code, den du einmal notierst.';
+
+  @override
+  String get backupSecretPassword => 'Eigenes Passwort';
+
+  @override
+  String get backupSecretPasswordHint => 'Muss lang und stark sein.';
+
+  @override
+  String get backupDone => 'Backup gespeichert';
+
+  @override
+  String backupFailed(String error) {
+    return 'Backup fehlgeschlagen: $error';
+  }
+
+  @override
+  String get backupRestoreFromLocation => 'Von Speicherort wiederherstellen';
+
+  @override
+  String get webDavHint =>
+      'Adresse des Ordners für die Backups. Bei Nextcloud: https://<server>/remote.php/dav/files/<benutzer>/WhatsEat – und unter Einstellungen → Sicherheit ein App-Passwort erstellen.';
+
+  @override
+  String get webDavUrl => 'Ordner-Adresse';
+
+  @override
+  String get webDavUrlInvalid => 'Bitte eine https://-Adresse angeben';
+
+  @override
+  String get webDavUser => 'Benutzername';
+
+  @override
+  String get webDavPassword => '(App-)Passwort';
 }

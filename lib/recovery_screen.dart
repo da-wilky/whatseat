@@ -4,9 +4,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import 'app.dart';
+import 'data/auto_backup.dart';
 import 'data/backup_crypto.dart';
 import 'l10n/app_localizations.dart';
 import 'providers.dart';
+import 'ui/auto_backup_screen.dart';
 import 'ui/backup_dialogs.dart';
 
 /// Shown instead of the app when the encrypted database can't be opened, e.g. because its key is gone.
@@ -23,8 +25,9 @@ class RecoveryApp extends StatelessWidget {
   final Object error;
   final VoidCallback onRetry;
 
-  /// Deletes the database; with a backup, it is imported into the new one.
-  final Future<void> Function(Map<String, dynamic>? backup) onReset;
+  /// Deletes the database; with a backup, it is imported into the new one, and [autoBackup] then saved.
+  /// Without a backup, automatic backup is turned off.
+  final Future<void> Function(Map<String, dynamic>? backup, {AutoBackupConfig? autoBackup}) onReset;
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +48,7 @@ class _RecoveryScreen extends StatefulWidget {
 
   final Object error;
   final VoidCallback onRetry;
-  final Future<void> Function(Map<String, dynamic>? backup) onReset;
+  final Future<void> Function(Map<String, dynamic>? backup, {AutoBackupConfig? autoBackup}) onReset;
 
   @override
   State<_RecoveryScreen> createState() => _RecoveryScreenState();
@@ -90,6 +93,27 @@ class _RecoveryScreenState extends State<_RecoveryScreen> {
       await _run(() => widget.onReset(backup));
     } on Object catch (e) {
       invalid(e);
+    }
+  }
+
+  Future<void> _restoreFromLocation() async {
+    final l = AppLocalizations.of(context);
+    // The automatic backup's location, if this device still knows it; secure storage may be what broke.
+    AutoBackupConfig? configured;
+    try {
+      configured = await loadAutoBackupConfig();
+    } on Exception {
+      configured = null;
+    }
+    if (!mounted) return;
+    final restored = await restoreFromBackupLocation(context, destination: configured?.destination);
+    if (restored == null) return;
+    final key = restored.key;
+    final autoBackup = key == null ? null : AutoBackupConfig(destination: restored.destination, key: key);
+    try {
+      await _run(() => widget.onReset(restored.backup, autoBackup: autoBackup));
+    } on Object catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.backupInvalid('$e'))));
     }
   }
 
@@ -140,6 +164,12 @@ class _RecoveryScreenState extends State<_RecoveryScreen> {
                 onPressed: _restore,
                 icon: const Icon(Icons.settings_backup_restore_rounded),
                 label: Text(l.backupRestore),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _restoreFromLocation,
+                icon: const Icon(Icons.cloud_download_outlined),
+                label: Text(l.backupRestoreFromLocation),
               ),
               const SizedBox(height: 12),
               TextButton(onPressed: _startFresh, child: Text(l.recoveryStartFresh)),

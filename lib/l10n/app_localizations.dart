@@ -875,7 +875,7 @@ abstract class AppLocalizations {
   /// No description provided for @recoveryStartFreshConfirm.
   ///
   /// In de, this message translates to:
-  /// **'Die unlesbaren Daten werden endgültig gelöscht.'**
+  /// **'Die unlesbaren Daten werden endgültig gelöscht.\n\nEin automatisches Backup wird dabei ausgeschaltet, damit es deine alten Backups nicht nach und nach ersetzt. Sie bleiben am Speicherort und lassen sich später wiederherstellen.'**
   String get recoveryStartFreshConfirm;
 
   /// No description provided for @startEating.
@@ -1087,6 +1087,360 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Falsches Passwort'**
   String get backupWrongPassword;
+
+  /// No description provided for @autoBackup.
+  ///
+  /// In de, this message translates to:
+  /// **'Automatisches Backup'**
+  String get autoBackup;
+
+  /// No description provided for @autoBackupOff.
+  ///
+  /// In de, this message translates to:
+  /// **'Aus'**
+  String get autoBackupOff;
+
+  /// No description provided for @autoBackupIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Sichert dein Protokoll nach Änderungen verschlüsselt an einem Ort deiner Wahl – etwa in deiner Nextcloud oder einem Cloud-Ordner. Nur mit deinem Wiederherstellungscode oder Passwort lässt es sich öffnen, auch nicht vom Anbieter des Speicherorts. Die letzten 7 Tage bleiben erhalten.'**
+  String get autoBackupIntro;
+
+  /// No description provided for @autoBackupSetUp.
+  ///
+  /// In de, this message translates to:
+  /// **'Automatisches Backup einrichten'**
+  String get autoBackupSetUp;
+
+  /// No description provided for @autoBackupNever.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch kein Backup'**
+  String get autoBackupNever;
+
+  /// No description provided for @autoBackupLast.
+  ///
+  /// In de, this message translates to:
+  /// **'Letztes Backup: {time}'**
+  String autoBackupLast(String time);
+
+  /// No description provided for @autoBackupNow.
+  ///
+  /// In de, this message translates to:
+  /// **'Jetzt sichern'**
+  String get autoBackupNow;
+
+  /// No description provided for @autoBackupDisable.
+  ///
+  /// In de, this message translates to:
+  /// **'Automatisches Backup ausschalten'**
+  String get autoBackupDisable;
+
+  /// No description provided for @autoBackupDisableHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Schlüssel und Zugangsdaten werden von diesem Gerät gelöscht. Ohne Haken bleiben die Backups am Speicherort und lassen sich mit dem Code weiter wiederherstellen.'**
+  String get autoBackupDisableHint;
+
+  /// No description provided for @autoBackupDeleteFiles.
+  ///
+  /// In de, this message translates to:
+  /// **'Auch die Backups dieses Geräts am Speicherort löschen'**
+  String get autoBackupDeleteFiles;
+
+  /// No description provided for @autoBackupDeleteAccount.
+  ///
+  /// In de, this message translates to:
+  /// **'Auch Konto und alle Backups auf dem Server löschen'**
+  String get autoBackupDeleteAccount;
+
+  /// No description provided for @autoBackupDeleteFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen fehlgeschlagen, Backup bleibt eingeschaltet: {error}'**
+  String autoBackupDeleteFailed(String error);
+
+  /// No description provided for @autoBackupPasswordTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup-Passwort festlegen'**
+  String get autoBackupPasswordTitle;
+
+  /// No description provided for @autoBackupPasswordHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Wer den Speicherort betreibt, kann beliebig oft raten. Deshalb mindestens {min} Zeichen mit Groß- und Kleinbuchstaben, Ziffern oder Sonderzeichen – oder ein langer Satz ab 24 Zeichen. Ein vergessenes Passwort lässt sich nicht zurücksetzen.'**
+  String autoBackupPasswordHint(int min);
+
+  /// No description provided for @passwordTooWeak.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu schwach – siehe Hinweis oben'**
+  String get passwordTooWeak;
+
+  /// No description provided for @backupCodeLockedHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Gib den Wiederherstellungscode ein, den du beim Einrichten des automatischen Backups notiert hast.'**
+  String get backupCodeLockedHint;
+
+  /// No description provided for @backupWrongCode.
+  ///
+  /// In de, this message translates to:
+  /// **'Falscher Code'**
+  String get backupWrongCode;
+
+  /// No description provided for @recoveryCode.
+  ///
+  /// In de, this message translates to:
+  /// **'Wiederherstellungscode'**
+  String get recoveryCode;
+
+  /// No description provided for @recoveryCodeHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Notiere diesen Code und bewahre ihn sicher auf, getrennt von deinem Handy. Er wird nur jetzt angezeigt. Ohne ihn lässt sich kein Backup wiederherstellen.'**
+  String get recoveryCodeHint;
+
+  /// No description provided for @recoveryCodeSaved.
+  ///
+  /// In de, this message translates to:
+  /// **'Ich habe den Code notiert'**
+  String get recoveryCodeSaved;
+
+  /// No description provided for @backupLocation.
+  ///
+  /// In de, this message translates to:
+  /// **'Speicherort'**
+  String get backupLocation;
+
+  /// No description provided for @backupLocationServer.
+  ///
+  /// In de, this message translates to:
+  /// **'WhatsEat-Server'**
+  String get backupLocationServer;
+
+  /// No description provided for @backupLocationServerHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Eigener Server, Anmeldung nur mit dem Wiederherstellungscode'**
+  String get backupLocationServerHint;
+
+  /// No description provided for @serverUrl.
+  ///
+  /// In de, this message translates to:
+  /// **'Server-Adresse oder Einladungslink'**
+  String get serverUrl;
+
+  /// No description provided for @serverInvite.
+  ///
+  /// In de, this message translates to:
+  /// **'Einladungscode'**
+  String get serverInvite;
+
+  /// No description provided for @serverInviteLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Vom Betreiber des Servers erhalten'**
+  String get serverInviteLabel;
+
+  /// No description provided for @serverInactivityTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Inaktive Konten werden gelöscht'**
+  String get serverInactivityTitle;
+
+  /// No description provided for @serverInactivityWarning.
+  ///
+  /// In de, this message translates to:
+  /// **'Dieser Server löscht Konten nach {days} Tagen ohne Aktivität – mitsamt allen Backups darauf.\n\nAls Aktivität zählt jeder Start der App und jedes Backup. Das Melden beim App-Start kannst du in den Einstellungen abschalten.'**
+  String serverInactivityWarning(int days);
+
+  /// No description provided for @understood.
+  ///
+  /// In de, this message translates to:
+  /// **'Verstanden'**
+  String get understood;
+
+  /// No description provided for @keepAlive.
+  ///
+  /// In de, this message translates to:
+  /// **'Konto aktiv halten'**
+  String get keepAlive;
+
+  /// No description provided for @keepAliveHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Meldet sich bei jedem App-Start beim Server, auch ohne neue Einträge'**
+  String get keepAliveHint;
+
+  /// No description provided for @serverInactivityNote.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Server löscht Konten nach {days} Tagen ohne Aktivität mitsamt allen Backups.'**
+  String serverInactivityNote(int days);
+
+  /// No description provided for @keepAliveOffTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Nicht mehr beim App-Start melden?'**
+  String get keepAliveOffTitle;
+
+  /// No description provided for @keepAliveOffWarning.
+  ///
+  /// In de, this message translates to:
+  /// **'Dann zählen nur noch Backups nach Änderungen als Aktivität. Trägst du {days} Tage lang nichts ein, löscht der Server dein Konto und alle Backups darauf.'**
+  String keepAliveOffWarning(int days);
+
+  /// No description provided for @keepAliveOffHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Dann zählen nur noch Backups nach Änderungen als Aktivität.'**
+  String get keepAliveOffHint;
+
+  /// No description provided for @keepAliveOffConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Abschalten'**
+  String get keepAliveOffConfirm;
+
+  /// No description provided for @backupLocationWebDav.
+  ///
+  /// In de, this message translates to:
+  /// **'WebDAV'**
+  String get backupLocationWebDav;
+
+  /// No description provided for @backupLocationWebDavHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Nextcloud, ownCloud, NAS'**
+  String get backupLocationWebDavHint;
+
+  /// No description provided for @backupLocationFolder.
+  ///
+  /// In de, this message translates to:
+  /// **'Ordner'**
+  String get backupLocationFolder;
+
+  /// No description provided for @backupLocationFolderHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Auf dem Gerät oder über eine Cloud-App, z. B. Google Drive oder iCloud Drive'**
+  String get backupLocationFolderHint;
+
+  /// No description provided for @backupLocationFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Speicherort nicht erreichbar: {error}'**
+  String backupLocationFailed(String error);
+
+  /// No description provided for @backupNoneFound.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Backups an diesem Speicherort gefunden'**
+  String get backupNoneFound;
+
+  /// No description provided for @backupChoose.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup wählen'**
+  String get backupChoose;
+
+  /// No description provided for @backupLocationHasBackups.
+  ///
+  /// In de, this message translates to:
+  /// **'Hier liegen schon Backups'**
+  String get backupLocationHasBackups;
+
+  /// No description provided for @backupLocationHasBackupsHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Wenn das ein neues Gerät ist, stelle zuerst das Backup wieder her – sonst ersetzt das heutige Backup dieses Geräts das deines alten Geräts.'**
+  String get backupLocationHasBackupsHint;
+
+  /// No description provided for @backupContinueSetup.
+  ///
+  /// In de, this message translates to:
+  /// **'Trotzdem einrichten'**
+  String get backupContinueSetup;
+
+  /// No description provided for @backupSecretTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup schützen mit …'**
+  String get backupSecretTitle;
+
+  /// No description provided for @backupSecretCode.
+  ///
+  /// In de, this message translates to:
+  /// **'Wiederherstellungscode'**
+  String get backupSecretCode;
+
+  /// No description provided for @backupSecretCodeHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Empfohlen. Ein zufälliger Code, den du einmal notierst.'**
+  String get backupSecretCodeHint;
+
+  /// No description provided for @backupSecretPassword.
+  ///
+  /// In de, this message translates to:
+  /// **'Eigenes Passwort'**
+  String get backupSecretPassword;
+
+  /// No description provided for @backupSecretPasswordHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Muss lang und stark sein.'**
+  String get backupSecretPasswordHint;
+
+  /// No description provided for @backupDone.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup gespeichert'**
+  String get backupDone;
+
+  /// No description provided for @backupFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup fehlgeschlagen: {error}'**
+  String backupFailed(String error);
+
+  /// No description provided for @backupRestoreFromLocation.
+  ///
+  /// In de, this message translates to:
+  /// **'Von Speicherort wiederherstellen'**
+  String get backupRestoreFromLocation;
+
+  /// No description provided for @webDavHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Adresse des Ordners für die Backups. Bei Nextcloud: https://<server>/remote.php/dav/files/<benutzer>/WhatsEat – und unter Einstellungen → Sicherheit ein App-Passwort erstellen.'**
+  String get webDavHint;
+
+  /// No description provided for @webDavUrl.
+  ///
+  /// In de, this message translates to:
+  /// **'Ordner-Adresse'**
+  String get webDavUrl;
+
+  /// No description provided for @webDavUrlInvalid.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte eine https://-Adresse angeben'**
+  String get webDavUrlInvalid;
+
+  /// No description provided for @webDavUser.
+  ///
+  /// In de, this message translates to:
+  /// **'Benutzername'**
+  String get webDavUser;
+
+  /// No description provided for @webDavPassword.
+  ///
+  /// In de, this message translates to:
+  /// **'(App-)Passwort'**
+  String get webDavPassword;
 }
 
 class _AppLocalizationsDelegate

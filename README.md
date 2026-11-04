@@ -39,15 +39,45 @@ Debug builds install as `de.whatseat.whatseat.debug` ("WhatsEat Debug") next to 
 ## Emulator (headless, over SSH)
 
 ```sh
-./emulator.sh start        # creates the AVD on first run, returns once booted
+nix run path:.#emulator           # creates the AVD on first run, returns once booted, prints how to connect
 nix develop path:. -c flutter run -d emulator-5554
-./emulator.sh stop
+nix run path:.#emulator -- stop
 ```
 
-To see and use it from your laptop, forward the emulator's adb port and mirror it with scrcpy:
+## Backup server
+
+`server/` is a small Go service that stores the app's encrypted backups (stdlib + pure-Go SQLite).
+Accounts exist only as an ID and token hash, both derived in the app from the recovery code;
+the server never gets anything that decrypts.
 
 ```sh
-ssh -L 5555:localhost:5555 <dev-machine>        # on the laptop
-nix shell nixpkgs#android-tools nixpkgs#scrcpy  # on the laptop, second terminal
-adb connect localhost:5555 && scrcpy -s localhost:5555
+cd server && nix shell nixpkgs#go -c go test ./...
+nix build path:.#whatseat-server
 ```
+
+NixOS (it serves plain HTTP on localhost; the app requires HTTPS):
+
+```nix
+{
+  imports = [ whatseat.nixosModules.whatseat-server ];
+  services.whatseat-server = {
+    enable = true;
+    publicUrl = "https://backup.example.org";
+    inviteOnly = true;      # default: anyone can register, up to maxAccounts (100); invites ignore that limit
+    inactiveDays = 365;     # accounts without login are deleted with their backups; 0 = never
+    purgeInterval = "24h";  # how often that cleanup runs (in-process, also at startup)
+  };
+  services.nginx.virtualHosts."backup.example.org" = {
+    enableACME = true;
+    forceSSL = true;
+    locations."/".proxyPass = "http://127.0.0.1:8470";
+    extraConfig = "client_max_body_size 6m;";
+  };
+}
+```
+
+Invites: `sudo whatseat-server-invite [validity]` (default `3d`; e.g. `30m`, `1h`, `365d`) prints a single-use code and, with
+`publicUrl` set, a link that fills in server and invite when pasted in the app.
+Outside NixOS every flag is also an env var: `WHATSEAT_INVITE_ONLY=true`, `WHATSEAT_INACTIVE_DAYS=365`, ….
+
+After changing `server/go.mod`, update `vendorHash` in `flake.nix`.

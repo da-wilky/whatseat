@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'data/auto_backup.dart';
 import 'l10n/app_localizations.dart';
 import 'lock/app_lock.dart';
 import 'providers.dart';
@@ -37,6 +38,8 @@ class WhatsEatApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locale = ref.watch(settingsProvider.select((s) => s.locale));
+    // Started with the app, so changes are watched and pending backups retried from the first frame.
+    ref.listen(autoBackupProvider, (_, _) {});
     return MaterialApp(
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,

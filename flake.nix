@@ -3,7 +3,7 @@
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-  outputs = { nixpkgs, ... }:
+  outputs = { self, nixpkgs, ... }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
@@ -38,11 +38,78 @@
             export ANDROID_AVD_HOME="$HOME/.android/avd"
           '';
         };
+      emulatorAndroid = composeAndroid { withEmulator = true; };
+      emulatorSdk = "${emulatorAndroid.androidsdk}/libexec/android-sdk";
+      # Headless, for working over SSH: `nix run path:.#emulator [-- stop]`.
+      emulatorApp = pkgs.writeShellApplication {
+        name = "whatseat-emulator";
+        runtimeInputs = [ emulatorAndroid.androidsdk pkgs.jdk17 pkgs.procps pkgs.util-linux pkgs.gawk pkgs.gnugrep ];
+        text = ''
+          export ANDROID_HOME=${emulatorSdk} ANDROID_SDK_ROOT=${emulatorSdk} JAVA_HOME=${pkgs.jdk17.home}
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
+          avd=whatseat
+          log="''${XDG_STATE_HOME:-$HOME/.local/state}/whatseat-emulator.log"
+
+          case "''${1:-start}" in
+            start)
+              if ! pgrep -u "$USER" -f "qemu-system.*-avd $avd" > /dev/null; then
+                if ! avdmanager list avd -c | grep -qx "$avd"; then
+                  echo no | avdmanager create avd -n "$avd" -k "system-images;android-36;google_apis_playstore;x86_64" -d pixel_7
+                fi
+                mkdir -p "$(dirname "$log")"
+                # setsid: keeps running after the SSH session ends.
+                setsid emulator -avd "$avd" -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect \
+                  > "$log" 2>&1 < /dev/null &
+                echo "booting, log: $log"
+              fi
+              # shellcheck disable=SC2016 # expanded on the device
+              adb wait-for-device shell 'while [ "$(getprop sys.boot_completed)" != 1 ]; do sleep 1; done'
+              host=$(< /proc/sys/kernel/hostname)
+              cat <<EOF
+
+          Emulator running as emulator-5554.
+
+          On this machine:
+            nix develop path:. -c flutter run -d emulator-5554
+
+          On another machine, to see and use it:
+            ssh -N -L 5555:localhost:5555 $USER@$host
+            # second terminal:
+            nix shell nixpkgs#android-tools nixpkgs#scrcpy -c sh -c 'adb connect localhost:5555 && scrcpy -s localhost:5555'
+
+          Stop with: nix run path:.#emulator -- stop
+          EOF
+              ;;
+            stop)
+              for serial in $(adb devices | awk '/^emulator-/ {print $1}'); do
+                adb -s "$serial" emu kill
+              done
+              ;;
+            *)
+              echo "usage: whatseat-emulator [start|stop]" >&2
+              exit 1
+              ;;
+          esac
+        '';
+      };
     in
     {
       devShells.${system} = {
         default = shellFor (composeAndroid { withEmulator = false; });
-        emulator = shellFor (composeAndroid { withEmulator = true; });
+        emulator = shellFor emulatorAndroid;
+      };
+      packages.${system}.whatseat-server = pkgs.buildGoModule {
+        pname = "whatseat-server";
+        version = "0.1.0";
+        src = ./server;
+        vendorHash = "sha256-zafxVNQsomtOwZ3RCyAeIgBg4Aj4Pf6yD3qZt6umd+Y=";
+        meta.mainProgram = "whatseat-server";
+      };
+      nixosModules.whatseat-server = import ./server/module.nix { inherit self; };
+      apps.${system}.emulator = {
+        type = "app";
+        program = "${emulatorApp}/bin/whatseat-emulator";
+        meta.description = "Headless Android emulator for testing over SSH";
       };
     };
 }

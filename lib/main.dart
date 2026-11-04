@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'data/auto_backup.dart';
 import 'data/database.dart';
 import 'providers.dart';
 import 'recovery_screen.dart';
@@ -43,7 +44,23 @@ Future<void> _excludeFromBackup() async {
   }
 }
 
-Future<void> _start(SharedPreferencesWithCache prefs, {Map<String, dynamic>? restore}) async {
+/// Secure storage may be what failed in the first place, so each step is best effort.
+Future<void> _forgetAutoBackup(SharedPreferencesWithCache prefs) async {
+  AutoBackupConfig? config;
+  try {
+    config = await loadAutoBackupConfig();
+  } on Exception {
+    config = null;
+  }
+  try {
+    await forgetAutoBackup(prefs, config);
+  } on PlatformException {
+    // Unreadable storage holds no configuration that could run either.
+  }
+}
+
+Future<void> _start(SharedPreferencesWithCache prefs,
+    {Map<String, dynamic>? restore, AutoBackupConfig? autoBackup}) async {
   AppDatabase? db;
   try {
     db = AppDatabase(await loadOrCreateDbKey());
@@ -55,9 +72,11 @@ Future<void> _start(SharedPreferencesWithCache prefs, {Map<String, dynamic>? res
       localeCode: prefs.getString('locale') ?? '',
       error: error,
       onRetry: () => _start(prefs),
-      onReset: (backup) async {
+      onReset: (backup, {autoBackup}) async {
         await resetDatabase();
-        await _start(prefs, restore: backup);
+        // Otherwise the empty diary keeps backing up in the old series, whose full backups get pruned within a week.
+        if (backup == null) await _forgetAutoBackup(prefs);
+        await _start(prefs, restore: backup, autoBackup: autoBackup);
       },
     ));
     return;
@@ -70,6 +89,13 @@ Future<void> _start(SharedPreferencesWithCache prefs, {Map<String, dynamic>? res
     } on Object {
       await db.close();
       rethrow;
+    }
+  }
+  if (autoBackup != null) {
+    try {
+      await saveAutoBackupConfig(autoBackup);
+    } on PlatformException {
+      // The restore itself succeeded; automatic backup can be set up again in the settings.
     }
   }
   await _excludeFromBackup();

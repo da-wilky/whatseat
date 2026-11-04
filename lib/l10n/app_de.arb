@@ -171,7 +171,7 @@
   "recoveryBody": "Die verschlüsselten Daten auf diesem Gerät lassen sich nicht öffnen – meist, weil der Schlüssel im sicheren Speicher des Geräts verloren gegangen ist. Ohne ihn sind die Daten nicht wiederherstellbar.\n\nVersuche es zuerst erneut (z. B. nach einem Neustart). Hilft das nicht, kannst du ein Backup einspielen oder neu beginnen.",
   "recoveryRetry": "Erneut versuchen",
   "recoveryStartFresh": "Neu beginnen",
-  "recoveryStartFreshConfirm": "Die unlesbaren Daten werden endgültig gelöscht.",
+  "recoveryStartFreshConfirm": "Die unlesbaren Daten werden endgültig gelöscht.\n\nEin automatisches Backup wird dabei ausgeschaltet, damit es deine alten Backups nicht nach und nach ersetzt. Sie bleiben am Speicherort und lassen sich später wiederherstellen.",
   "startEating": "Essen beginnen",
   "startEatingSave": "Starten",
   "startEatingHint": "Den Rest trägst du ein, wenn du fertig bist. Alles ist optional.",
@@ -226,5 +226,120 @@
   "backupSetPassword": "Passwort festlegen",
   "backupLockedTitle": "Verschlüsseltes Backup",
   "backupLockedHint": "Gib das Passwort ein, mit dem dieses Backup erstellt wurde.",
-  "backupWrongPassword": "Falsches Passwort"
+  "backupWrongPassword": "Falsches Passwort",
+  "autoBackup": "Automatisches Backup",
+  "autoBackupOff": "Aus",
+  "autoBackupIntro": "Sichert dein Protokoll nach Änderungen verschlüsselt an einem Ort deiner Wahl – etwa in deiner Nextcloud oder einem Cloud-Ordner. Nur mit deinem Wiederherstellungscode oder Passwort lässt es sich öffnen, auch nicht vom Anbieter des Speicherorts. Die letzten 7 Tage bleiben erhalten.",
+  "autoBackupSetUp": "Automatisches Backup einrichten",
+  "autoBackupNever": "Noch kein Backup",
+  "autoBackupLast": "Letztes Backup: {time}",
+  "@autoBackupLast": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "autoBackupNow": "Jetzt sichern",
+  "autoBackupDisable": "Automatisches Backup ausschalten",
+  "autoBackupDisableHint": "Schlüssel und Zugangsdaten werden von diesem Gerät gelöscht. Ohne Haken bleiben die Backups am Speicherort und lassen sich mit dem Code weiter wiederherstellen.",
+  "autoBackupDeleteFiles": "Auch die Backups dieses Geräts am Speicherort löschen",
+  "autoBackupDeleteAccount": "Auch Konto und alle Backups auf dem Server löschen",
+  "autoBackupDeleteFailed": "Löschen fehlgeschlagen, Backup bleibt eingeschaltet: {error}",
+  "@autoBackupDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "autoBackupPasswordTitle": "Backup-Passwort festlegen",
+  "autoBackupPasswordHint": "Wer den Speicherort betreibt, kann beliebig oft raten. Deshalb mindestens {min} Zeichen mit Groß- und Kleinbuchstaben, Ziffern oder Sonderzeichen – oder ein langer Satz ab 24 Zeichen. Ein vergessenes Passwort lässt sich nicht zurücksetzen.",
+  "@autoBackupPasswordHint": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "passwordTooWeak": "Zu schwach – siehe Hinweis oben",
+  "backupCodeLockedHint": "Gib den Wiederherstellungscode ein, den du beim Einrichten des automatischen Backups notiert hast.",
+  "backupWrongCode": "Falscher Code",
+  "recoveryCode": "Wiederherstellungscode",
+  "recoveryCodeHint": "Notiere diesen Code und bewahre ihn sicher auf, getrennt von deinem Handy. Er wird nur jetzt angezeigt. Ohne ihn lässt sich kein Backup wiederherstellen.",
+  "recoveryCodeSaved": "Ich habe den Code notiert",
+  "backupLocation": "Speicherort",
+  "backupLocationServer": "WhatsEat-Server",
+  "backupLocationServerHint": "Eigener Server, Anmeldung nur mit dem Wiederherstellungscode",
+  "serverUrl": "Server-Adresse oder Einladungslink",
+  "serverInvite": "Einladungscode",
+  "serverInviteLabel": "Vom Betreiber des Servers erhalten",
+  "serverInactivityTitle": "Inaktive Konten werden gelöscht",
+  "serverInactivityWarning": "Dieser Server löscht Konten nach {days} Tagen ohne Aktivität – mitsamt allen Backups darauf.\n\nAls Aktivität zählt jeder Start der App und jedes Backup. Das Melden beim App-Start kannst du in den Einstellungen abschalten.",
+  "@serverInactivityWarning": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "understood": "Verstanden",
+  "keepAlive": "Konto aktiv halten",
+  "keepAliveHint": "Meldet sich bei jedem App-Start beim Server, auch ohne neue Einträge",
+  "serverInactivityNote": "Der Server löscht Konten nach {days} Tagen ohne Aktivität mitsamt allen Backups.",
+  "@serverInactivityNote": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "keepAliveOffTitle": "Nicht mehr beim App-Start melden?",
+  "keepAliveOffWarning": "Dann zählen nur noch Backups nach Änderungen als Aktivität. Trägst du {days} Tage lang nichts ein, löscht der Server dein Konto und alle Backups darauf.",
+  "@keepAliveOffWarning": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "keepAliveOffHint": "Dann zählen nur noch Backups nach Änderungen als Aktivität.",
+  "keepAliveOffConfirm": "Abschalten",
+  "backupLocationWebDav": "WebDAV",
+  "backupLocationWebDavHint": "Nextcloud, ownCloud, NAS",
+  "backupLocationFolder": "Ordner",
+  "backupLocationFolderHint": "Auf dem Gerät oder über eine Cloud-App, z. B. Google Drive oder iCloud Drive",
+  "backupLocationFailed": "Speicherort nicht erreichbar: {error}",
+  "@backupLocationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "backupNoneFound": "Keine Backups an diesem Speicherort gefunden",
+  "backupChoose": "Backup wählen",
+  "backupLocationHasBackups": "Hier liegen schon Backups",
+  "backupLocationHasBackupsHint": "Wenn das ein neues Gerät ist, stelle zuerst das Backup wieder her – sonst ersetzt das heutige Backup dieses Geräts das deines alten Geräts.",
+  "backupContinueSetup": "Trotzdem einrichten",
+  "backupSecretTitle": "Backup schützen mit …",
+  "backupSecretCode": "Wiederherstellungscode",
+  "backupSecretCodeHint": "Empfohlen. Ein zufälliger Code, den du einmal notierst.",
+  "backupSecretPassword": "Eigenes Passwort",
+  "backupSecretPasswordHint": "Muss lang und stark sein.",
+  "backupDone": "Backup gespeichert",
+  "backupFailed": "Backup fehlgeschlagen: {error}",
+  "@backupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "backupRestoreFromLocation": "Von Speicherort wiederherstellen",
+  "webDavHint": "Adresse des Ordners für die Backups. Bei Nextcloud: https://<server>/remote.php/dav/files/<benutzer>/WhatsEat – und unter Einstellungen → Sicherheit ein App-Passwort erstellen.",
+  "webDavUrl": "Ordner-Adresse",
+  "webDavUrlInvalid": "Bitte eine https://-Adresse angeben",
+  "webDavUser": "Benutzername",
+  "webDavPassword": "(App-)Passwort"
 }

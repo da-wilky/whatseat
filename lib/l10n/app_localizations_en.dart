@@ -424,7 +424,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recoveryStartFreshConfirm =>
-      'The unreadable data will be deleted permanently.';
+      'The unreadable data will be deleted permanently.\n\nAutomatic backup is turned off, so it doesn\'t gradually replace your old backups. They stay at the location and can be restored later.';
 
   @override
   String get startEating => 'Start eating';
@@ -538,4 +538,210 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupWrongPassword => 'Wrong password';
+
+  @override
+  String get autoBackup => 'Automatic backup';
+
+  @override
+  String get autoBackupOff => 'Off';
+
+  @override
+  String get autoBackupIntro =>
+      'Saves your diary encrypted after changes to a place of your choice – e.g. your Nextcloud or a cloud folder. Only your recovery code or password can open it, not even the storage provider. The last 7 days are kept.';
+
+  @override
+  String get autoBackupSetUp => 'Set up automatic backup';
+
+  @override
+  String get autoBackupNever => 'No backup yet';
+
+  @override
+  String autoBackupLast(String time) {
+    return 'Last backup: $time';
+  }
+
+  @override
+  String get autoBackupNow => 'Back up now';
+
+  @override
+  String get autoBackupDisable => 'Turn off automatic backup';
+
+  @override
+  String get autoBackupDisableHint =>
+      'The key and login details are removed from this device. Unticked, the backups stay at the location and can still be restored with the code.';
+
+  @override
+  String get autoBackupDeleteFiles =>
+      'Also delete this device\'s backups at the location';
+
+  @override
+  String get autoBackupDeleteAccount =>
+      'Also delete the account and all backups on the server';
+
+  @override
+  String autoBackupDeleteFailed(String error) {
+    return 'Deleting failed, backup stays on: $error';
+  }
+
+  @override
+  String get autoBackupPasswordTitle => 'Set backup password';
+
+  @override
+  String autoBackupPasswordHint(int min) {
+    return 'Whoever runs the storage can guess as often as they like. So use at least $min characters mixing upper and lower case, digits or symbols – or a long sentence of 24 characters or more. A forgotten password can\'t be reset.';
+  }
+
+  @override
+  String get passwordTooWeak => 'Too weak – see the note above';
+
+  @override
+  String get backupCodeLockedHint =>
+      'Enter the recovery code you wrote down when setting up automatic backup.';
+
+  @override
+  String get backupWrongCode => 'Wrong code';
+
+  @override
+  String get recoveryCode => 'Recovery code';
+
+  @override
+  String get recoveryCodeHint =>
+      'Write this code down and keep it safe, away from your phone. It is shown only now. Without it, no backup can be restored.';
+
+  @override
+  String get recoveryCodeSaved => 'I have written down the code';
+
+  @override
+  String get backupLocation => 'Location';
+
+  @override
+  String get backupLocationServer => 'WhatsEat server';
+
+  @override
+  String get backupLocationServerHint =>
+      'Own server, login with the recovery code only';
+
+  @override
+  String get serverUrl => 'Server address or invite link';
+
+  @override
+  String get serverInvite => 'Invite code';
+
+  @override
+  String get serverInviteLabel => 'From whoever runs the server';
+
+  @override
+  String get serverInactivityTitle => 'Inactive accounts are deleted';
+
+  @override
+  String serverInactivityWarning(int days) {
+    return 'This server deletes accounts after $days days without activity – including all backups on it.\n\nEvery app start and every backup counts as activity. Reporting on app start can be turned off in the settings.';
+  }
+
+  @override
+  String get understood => 'Got it';
+
+  @override
+  String get keepAlive => 'Keep account active';
+
+  @override
+  String get keepAliveHint =>
+      'Reports to the server on every app start, even without new entries';
+
+  @override
+  String serverInactivityNote(int days) {
+    return 'The server deletes accounts after $days days without activity, including all backups.';
+  }
+
+  @override
+  String get keepAliveOffTitle => 'Stop reporting on app start?';
+
+  @override
+  String keepAliveOffWarning(int days) {
+    return 'Then only backups after changes count as activity. If you enter nothing for $days days, the server deletes your account and all backups on it.';
+  }
+
+  @override
+  String get keepAliveOffHint =>
+      'Then only backups after changes count as activity.';
+
+  @override
+  String get keepAliveOffConfirm => 'Turn off';
+
+  @override
+  String get backupLocationWebDav => 'WebDAV';
+
+  @override
+  String get backupLocationWebDavHint => 'Nextcloud, ownCloud, NAS';
+
+  @override
+  String get backupLocationFolder => 'Folder';
+
+  @override
+  String get backupLocationFolderHint =>
+      'On the device or through a cloud app, e.g. Google Drive or iCloud Drive';
+
+  @override
+  String backupLocationFailed(String error) {
+    return 'Location not reachable: $error';
+  }
+
+  @override
+  String get backupNoneFound => 'No backups found at this location';
+
+  @override
+  String get backupChoose => 'Choose backup';
+
+  @override
+  String get backupLocationHasBackups => 'There are backups here already';
+
+  @override
+  String get backupLocationHasBackupsHint =>
+      'If this is a new device, restore the backup first – otherwise today\'s backup from this device replaces the one from your old device.';
+
+  @override
+  String get backupContinueSetup => 'Set up anyway';
+
+  @override
+  String get backupSecretTitle => 'Protect backup with …';
+
+  @override
+  String get backupSecretCode => 'Recovery code';
+
+  @override
+  String get backupSecretCodeHint =>
+      'Recommended. A random code you write down once.';
+
+  @override
+  String get backupSecretPassword => 'Own password';
+
+  @override
+  String get backupSecretPasswordHint => 'Must be long and strong.';
+
+  @override
+  String get backupDone => 'Backup saved';
+
+  @override
+  String backupFailed(String error) {
+    return 'Backup failed: $error';
+  }
+
+  @override
+  String get backupRestoreFromLocation => 'Restore from location';
+
+  @override
+  String get webDavHint =>
+      'Address of the folder for the backups. For Nextcloud: https://<server>/remote.php/dav/files/<user>/WhatsEat – and create an app password under Settings → Security.';
+
+  @override
+  String get webDavUrl => 'Folder address';
+
+  @override
+  String get webDavUrlInvalid => 'Please enter an https:// address';
+
+  @override
+  String get webDavUser => 'User name';
+
+  @override
+  String get webDavPassword => '(App) password';
 }
