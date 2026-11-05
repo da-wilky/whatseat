@@ -150,6 +150,24 @@ void main() {
     expect((await saved(tester)).single.items.map((i) => i.food), ['Brot']);
   });
 
+  testWidgets('adding parts is only offered on the focused item or one with parts', (tester) async {
+    await openEditor(
+      tester,
+      EntryDraft(day: '2026-11-05', meal: MealType.lunch, start: 12 * 60, items: const [
+        FoodItem(food: 'Salat', parts: [FoodItem(food: 'Karotte')]),
+        FoodItem(food: 'Brot'),
+      ]),
+    );
+    expect(find.text('Zutat'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextField, 'Brot'));
+    await tester.pumpAndSettle();
+    expect(find.text('Zutat'), findsNWidgets(2));
+    await tester.tap(find.text('Zutat').last);
+    await tester.pumpAndSettle();
+    expect(emptyPartFields(), findsOneWidget);
+  });
+
   test('nested parts from a backup are cut to one level', () {
     final item = FoodItem.fromJson(const {
       'food': 'Salat',

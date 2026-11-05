@@ -559,14 +559,26 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
         children: [
           _itemRow(l, index, row),
           for (final part in row.parts) KeyedSubtree(key: ObjectKey(part), child: _partRow(l, row, part)),
-          Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: TextButton.icon(
-              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-              onPressed: () => _addPart(row),
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: Text(l.addPart),
-            ),
+          // Only offered on the item being edited or one that already has parts, to keep the list quiet.
+          ListenableBuilder(
+            listenable: Listenable.merge([row.foodFocus, for (final p in row.parts) p.focus]),
+            builder: (context, _) {
+              if (row.parts.isEmpty && !row.foodFocus.hasFocus) return const SizedBox.shrink();
+              final theme = Theme.of(context);
+              return Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: theme.colorScheme.onSurfaceVariant,
+                    textStyle: theme.textTheme.bodySmall,
+                  ),
+                  onPressed: () => _addPart(row),
+                  icon: const Icon(Icons.add_rounded, size: 16),
+                  label: Text(l.addPart),
+                ),
+              );
+            },
           ),
         ],
       );
