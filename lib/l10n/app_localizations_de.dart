@@ -603,7 +603,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get recoveryCodeCopy => 'Kopieren';
 
   @override
-  String get recoveryCodeCopied => 'Code kopiert';
+  String get recoveryCodeCopied => 'Kopiert';
+
+  @override
+  String get recoveryCodeClipboardCleared =>
+      'Wird nach 2 Minuten aus der Zwischenablage gelöscht';
 
   @override
   String get recoveryCodeDownload => 'Als Datei speichern';

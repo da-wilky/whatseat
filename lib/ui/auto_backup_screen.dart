@@ -466,6 +466,7 @@ class _RecoveryCodeDialog extends StatefulWidget {
 }
 
 class _RecoveryCodeDialogState extends State<_RecoveryCodeDialog> {
+  bool _copied = false;
   bool _exported = false;
   bool _saved = false;
 
@@ -488,9 +489,12 @@ class _RecoveryCodeDialogState extends State<_RecoveryCodeDialog> {
     } else {
       await Clipboard.setData(ClipboardData(text: widget.code));
     }
-    if (!mounted) return;
-    setState(() => _exported = true);
-    _snack(context, AppLocalizations.of(context).recoveryCodeCopied);
+    if (mounted) {
+      setState(() {
+        _copied = true;
+        _exported = true;
+      });
+    }
   }
 
   Future<void> _download() async {
@@ -552,11 +556,17 @@ class _RecoveryCodeDialogState extends State<_RecoveryCodeDialog> {
             alignment: WrapAlignment.center,
             spacing: 8,
             children: [
-              TextButton.icon(onPressed: _copy, icon: const Icon(Icons.copy), label: Text(l.recoveryCodeCopy)),
+              TextButton.icon(
+                onPressed: _copy,
+                icon: Icon(_copied ? Icons.check : Icons.copy),
+                label: Text(_copied ? l.recoveryCodeCopied : l.recoveryCodeCopy),
+              ),
               TextButton.icon(
                   onPressed: _download, icon: const Icon(Icons.download), label: Text(l.recoveryCodeDownload)),
             ],
           ),
+          if (_copied)
+            Text(l.recoveryCodeClipboardCleared, textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
             value: _saved,

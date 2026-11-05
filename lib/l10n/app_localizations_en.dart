@@ -599,7 +599,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recoveryCodeCopy => 'Copy';
 
   @override
-  String get recoveryCodeCopied => 'Code copied';
+  String get recoveryCodeCopied => 'Copied';
+
+  @override
+  String get recoveryCodeClipboardCleared =>
+      'Removed from the clipboard after 2 minutes';
 
   @override
   String get recoveryCodeDownload => 'Save as file';

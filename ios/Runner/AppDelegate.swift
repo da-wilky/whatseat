@@ -39,10 +39,10 @@ import UniformTypeIdentifiers
           result(FlutterMethodNotImplemented)
           return
         }
-        // Kept off Universal Clipboard and cleared after a few minutes.
+        // Kept off Universal Clipboard and cleared after two minutes, like on Android.
         UIPasteboard.general.setItems(
           [[UTType.utf8PlainText.identifier: text]],
-          options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(5 * 60)])
+          options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(2 * 60)])
         result(nil)
       }
     FlutterMethodChannel(name: "whatseat/storage", binaryMessenger: registrar.messenger())

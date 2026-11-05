@@ -1187,8 +1187,14 @@ abstract class AppLocalizations {
   /// No description provided for @recoveryCodeCopied.
   ///
   /// In de, this message translates to:
-  /// **'Code kopiert'**
+  /// **'Kopiert'**
   String get recoveryCodeCopied;
+
+  /// No description provided for @recoveryCodeClipboardCleared.
+  ///
+  /// In de, this message translates to:
+  /// **'Wird nach 2 Minuten aus der Zwischenablage gelöscht'**
+  String get recoveryCodeClipboardCleared;
 
   /// No description provided for @recoveryCodeDownload.
   ///

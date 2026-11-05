@@ -4,6 +4,9 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.PersistableBundle
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
@@ -18,10 +21,26 @@ import java.io.IOException
 import java.io.InputStream
 
 private const val MAX_READ_BYTES = 64 * 1024 * 1024
+private const val SENSITIVE_CLIP_LABEL = "WhatsEat recovery code"
+private const val SENSITIVE_CLIP_LIFETIME_MS = 2 * 60 * 1000L
 
 // FlutterFragmentActivity is required by local_auth's BiometricPrompt.
 class MainActivity : FlutterFragmentActivity() {
     private var pendingPick: MethodChannel.Result? = null
+    private val clipboardHandler = Handler(Looper.getMainLooper())
+
+    private val clearSensitiveClip = Runnable {
+        val clipboard = applicationContext.getSystemService(ClipboardManager::class.java)
+        // In the background Android 10+ hides the clipboard, so unknown counts as still ours:
+        // wiping something copied since is the lesser harm than leaving the code there.
+        val label = clipboard.primaryClipDescription?.label
+        if (label != null && label != SENSITIVE_CLIP_LABEL) return@Runnable
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            clipboard.clearPrimaryClip()
+        } else {
+            clipboard.setPrimaryClip(ClipData.newPlainText("", ""))
+        }
+    }
 
     private val pickFolder = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
         val result = pendingPick ?: return@registerForActivityResult
@@ -58,10 +77,12 @@ class MainActivity : FlutterFragmentActivity() {
         }
         MethodChannel(messenger, "whatseat/clipboard").setMethodCallHandler { call, result ->
             if (call.method == "copySensitive") {
-                val clip = ClipData.newPlainText("", call.arguments as String)
+                val clip = ClipData.newPlainText(SENSITIVE_CLIP_LABEL, call.arguments as String)
                 // ClipDescription.EXTRA_IS_SENSITIVE from API 33; keyboards honour the same key on older versions.
                 clip.description.extras = PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
-                getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
+                applicationContext.getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
+                clipboardHandler.removeCallbacks(clearSensitiveClip)
+                clipboardHandler.postDelayed(clearSensitiveClip, SENSITIVE_CLIP_LIFETIME_MS)
                 result.success(null)
             } else {
                 result.notImplemented()
