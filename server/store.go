@@ -39,6 +39,9 @@ var migrations = []string{
 		expires_at BIGINT NOT NULL
 	)`,
 	`CREATE TABLE heartbeat (last_alive BIGINT NOT NULL)`,
+	`ALTER TABLE invites ADD COLUMN created_at BIGINT NOT NULL DEFAULT 0`,
+	`ALTER TABLE invites ADD COLUMN note TEXT NOT NULL DEFAULT ''`,
+	`ALTER TABLE accounts ADD COLUMN note TEXT NOT NULL DEFAULT ''`,
 }
 
 type store struct{ db *sql.DB }
@@ -47,6 +50,20 @@ type backupInfo struct {
 	Name     string    `json:"name"`
 	Size     int       `json:"size"`
 	Modified time.Time `json:"modified"`
+}
+
+type inviteInfo struct {
+	hash             []byte
+	note             string
+	created, expires time.Time
+}
+
+type accountInfo struct {
+	id                string
+	note              string
+	created, lastSeen time.Time
+	backups           int
+	bytes             int64
 }
 
 func openStore(path string) (*store, error) {
@@ -104,7 +121,7 @@ func (s *store) tokenHash(ctx context.Context, account string) ([]byte, error) {
 	return hash, err
 }
 
-// createAccount uses up the invite; a nil inviteHash means registration is open, limited by maxAccounts.
+// createAccount uses up the invite and takes over its note; a nil inviteHash means registration is open, limited by maxAccounts.
 func (s *store) createAccount(ctx context.Context, account string, tokenHash, inviteHash []byte, maxAccounts int) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -112,13 +129,15 @@ func (s *store) createAccount(ctx context.Context, account string, tokenHash, in
 	}
 	defer tx.Rollback()
 	now := time.Now().UnixMilli()
+	note := ""
 	if inviteHash != nil {
-		res, err := tx.ExecContext(ctx, `DELETE FROM invites WHERE code_hash = ? AND expires_at > ?`, inviteHash, now)
+		err := tx.QueryRowContext(ctx, `DELETE FROM invites WHERE code_hash = ? AND expires_at > ? RETURNING note`,
+			inviteHash, now).Scan(&note)
+		if errors.Is(err, sql.ErrNoRows) {
+			return errInvalidInvite
+		}
 		if err != nil {
 			return err
-		}
-		if n, err := res.RowsAffected(); err != nil || n == 0 {
-			return errors.Join(errInvalidInvite, err)
 		}
 	} else {
 		var count int
@@ -130,8 +149,8 @@ func (s *store) createAccount(ctx context.Context, account string, tokenHash, in
 		}
 	}
 	// A concurrent registration may have created it since the caller looked; the invite then stays unused.
-	res, err := tx.ExecContext(ctx, `INSERT INTO accounts (id, token_hash, created_at, last_seen) VALUES (?, ?, ?, ?)
-		ON CONFLICT (id) DO NOTHING`, account, tokenHash, now, now)
+	res, err := tx.ExecContext(ctx, `INSERT INTO accounts (id, token_hash, created_at, last_seen, note) VALUES (?, ?, ?, ?, ?)
+		ON CONFLICT (id) DO NOTHING`, account, tokenHash, now, now, note)
 	if err != nil {
 		return err
 	}
@@ -146,9 +165,58 @@ func (s *store) touch(ctx context.Context, account string) error {
 	return err
 }
 
-func (s *store) createInvite(ctx context.Context, codeHash []byte, expires time.Time) error {
-	_, err := s.db.ExecContext(ctx, `INSERT INTO invites (code_hash, expires_at) VALUES (?, ?)`, codeHash, expires.UnixMilli())
+func (s *store) createInvite(ctx context.Context, codeHash []byte, expires time.Time, note string) error {
+	_, err := s.db.ExecContext(ctx, `INSERT INTO invites (code_hash, expires_at, created_at, note) VALUES (?, ?, ?, ?)`,
+		codeHash, expires.UnixMilli(), time.Now().UnixMilli(), note)
 	return err
+}
+
+// invites lists the usable ones; expired invites wait for the next purge.
+func (s *store) invites(ctx context.Context) ([]inviteInfo, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT code_hash, note, created_at, expires_at FROM invites
+		WHERE expires_at > ? ORDER BY created_at`, time.Now().UnixMilli())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var invites []inviteInfo
+	for rows.Next() {
+		var i inviteInfo
+		var created, expires int64
+		if err := rows.Scan(&i.hash, &i.note, &created, &expires); err != nil {
+			return nil, err
+		}
+		i.created, i.expires = time.UnixMilli(created), time.UnixMilli(expires)
+		invites = append(invites, i)
+	}
+	return invites, rows.Err()
+}
+
+func (s *store) deleteInvite(ctx context.Context, codeHash []byte) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM invites WHERE code_hash = ?`, codeHash)
+	return err
+}
+
+func (s *store) accounts(ctx context.Context) ([]accountInfo, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT a.id, a.note, a.created_at, a.last_seen,
+			COUNT(b.name), COALESCE(SUM(LENGTH(b.data)), 0)
+		FROM accounts a LEFT JOIN backups b ON b.account_id = a.id
+		GROUP BY a.id, a.note, a.created_at, a.last_seen ORDER BY a.created_at`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var accounts []accountInfo
+	for rows.Next() {
+		var a accountInfo
+		var created, lastSeen int64
+		if err := rows.Scan(&a.id, &a.note, &created, &lastSeen, &a.backups, &a.bytes); err != nil {
+			return nil, err
+		}
+		a.created, a.lastSeen = time.UnixMilli(created), time.UnixMilli(lastSeen)
+		accounts = append(accounts, a)
+	}
+	return accounts, rows.Err()
 }
 
 func (s *store) inviteValid(ctx context.Context, codeHash []byte) (bool, error) {

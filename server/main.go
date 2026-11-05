@@ -4,9 +4,11 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/rand"
 	"encoding/base32"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -17,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"text/tabwriter"
 	"time"
 )
 
@@ -34,9 +37,18 @@ func envDefaults(fs *flag.FlagSet) {
 }
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "invite" {
-		invite(os.Args[2:])
-		return
+	commands := map[string]func([]string){
+		"invite":         invite,
+		"invites":        listInvites,
+		"revoke-invite":  revokeInvite,
+		"accounts":       listAccounts,
+		"delete-account": deleteAccount,
+	}
+	if len(os.Args) > 1 {
+		if command, ok := commands[os.Args[1]]; ok {
+			command(os.Args[2:])
+			return
+		}
 	}
 	listen := flag.String("listen", "127.0.0.1:8470", "address to listen on; put a TLS reverse proxy in front")
 	dbPath := flag.String("db", "whatseat.sqlite", "SQLite database file")
@@ -50,6 +62,9 @@ func main() {
 	purgeInterval := flag.Duration("purge-interval", 24*time.Hour, "how often inactive accounts and expired invites are deleted; also once at startup")
 	envDefaults(flag.CommandLine)
 	flag.Parse()
+	if flag.NArg() > 0 {
+		log.Fatalf("unknown command %q", flag.Arg(0))
+	}
 	if *purgeInterval <= 0 {
 		log.Fatal("purge-interval must be positive")
 	}
@@ -130,42 +145,182 @@ func parseValidity(s string) (time.Duration, error) {
 	return d, nil
 }
 
-func invite(args []string) {
-	fs := flag.NewFlagSet("invite", flag.ExitOnError)
+// command is an admin subcommand; it works on the database directly, next to a running server.
+// Only flags defined before newCommand returns, or before another envDefaults call, read WHATSEAT_* variables.
+type command struct {
+	fs      *flag.FlagSet
+	dbPath  *string
+	maxArgs int
+}
+
+func newCommand(name, args string, maxArgs int) *command {
+	fs := flag.NewFlagSet(name, flag.ExitOnError)
 	fs.Usage = func() {
-		fmt.Fprintln(fs.Output(), "usage: whatseat-server invite [flags] [validity, default 3d, e.g. 30m, 1h, 365d]")
+		fmt.Fprintf(fs.Output(), "usage: whatseat-server %s [flags] %s\n", name, args)
 		fs.PrintDefaults()
 	}
 	dbPath := fs.String("db", "whatseat.sqlite", "SQLite database file")
-	publicURL := fs.String("public-url", "", "server address as the app sees it; prints an invite link to paste in the app")
 	envDefaults(fs)
-	fs.Parse(args)
-	if fs.NArg() > 1 {
-		fs.Usage()
+	return &command{fs, dbPath, maxArgs}
+}
+
+func (c *command) open(args []string, minArgs int) *store {
+	c.fs.Parse(args)
+	if c.fs.NArg() < minArgs || c.fs.NArg() > c.maxArgs {
+		c.fs.Usage()
 		os.Exit(2)
 	}
+	s, err := openStore(*c.dbPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return s
+}
+
+const timeFormat = "2006-01-02 15:04"
+
+// inviteID shows an invite without its code, which the server doesn't keep.
+func inviteID(hash []byte) string {
+	return hex.EncodeToString(hash)[:12]
+}
+
+// matchPrefix finds the one id starting with prefix, like an abbreviated git commit.
+func matchPrefix(prefix string, ids []string) (string, error) {
+	if prefix == "" {
+		return "", errors.New("empty id")
+	}
+	prefix = strings.ToLower(prefix)
+	var found []string
+	for _, id := range ids {
+		if strings.HasPrefix(id, prefix) {
+			found = append(found, id)
+		}
+	}
+	switch len(found) {
+	case 0:
+		return "", fmt.Errorf("no match for %q", prefix)
+	case 1:
+		return found[0], nil
+	}
+	return "", fmt.Errorf("%q matches %d entries; give more characters", prefix, len(found))
+}
+
+func invite(args []string) {
+	c := newCommand("invite", "[validity, default 3d, e.g. 30m, 1h, 365d]", 1)
+	publicURL := c.fs.String("public-url", "", "server address as the app sees it; prints an invite link to paste in the app")
+	envDefaults(c.fs)
+	// Defined after envDefaults, like -yes: a stray WHATSEAT_NOTE or WHATSEAT_YES mustn't apply to every call.
+	note := c.fs.String("note", "", "who the invite is for; the account it creates keeps it")
+	s := c.open(args, 0)
+	defer s.db.Close()
 	validity := 3 * 24 * time.Hour
-	if fs.NArg() == 1 {
+	if c.fs.NArg() == 1 {
 		var err error
-		if validity, err = parseValidity(fs.Arg(0)); err != nil {
+		if validity, err = parseValidity(c.fs.Arg(0)); err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	s, err := openStore(*dbPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer s.db.Close()
 	secret := make([]byte, 15)
 	rand.Read(secret)
 	code := base32.StdEncoding.EncodeToString(secret)
 	expires := time.Now().Add(validity)
-	if err := s.createInvite(context.Background(), inviteHash(code), expires); err != nil {
+	if err := s.createInvite(context.Background(), inviteHash(code), expires, *note); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Invite (single use, valid until %s): %s\n", expires.Format("2006-01-02 15:04 MST"), code)
+	fmt.Printf("Invite %s (single use, valid until %s): %s\n", inviteID(inviteHash(code)), expires.Format("2006-01-02 15:04 MST"), code)
 	if *publicURL != "" {
 		fmt.Printf("Link to paste into the app: %s#invite=%s\n", strings.TrimSuffix(*publicURL, "/")+"/", code)
 	}
+}
+
+func listInvites(args []string) {
+	s := newCommand("invites", "", 0).open(args, 0)
+	defer s.db.Close()
+	invites, err := s.invites(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "ID\tCREATED\tEXPIRES\tNOTE")
+	for _, i := range invites {
+		created := "-"
+		if i.created.UnixMilli() != 0 {
+			created = i.created.Format(timeFormat)
+		}
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", inviteID(i.hash), created, i.expires.Format(timeFormat), i.note)
+	}
+	w.Flush()
+}
+
+func revokeInvite(args []string) {
+	c := newCommand("revoke-invite", "ID", 1)
+	s := c.open(args, 1)
+	defer s.db.Close()
+	ctx := context.Background()
+	invites, err := s.invites(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	ids := make([]string, len(invites))
+	for n, i := range invites {
+		ids[n] = hex.EncodeToString(i.hash)
+	}
+	id, err := matchPrefix(c.fs.Arg(0), ids)
+	if err != nil {
+		log.Fatal(err)
+	}
+	hash, _ := hex.DecodeString(id)
+	if err := s.deleteInvite(ctx, hash); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Revoked invite %s\n", inviteID(hash))
+}
+
+func listAccounts(args []string) {
+	s := newCommand("accounts", "", 0).open(args, 0)
+	defer s.db.Close()
+	accounts, err := s.accounts(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "ID\tCREATED\tLAST SEEN\tBACKUPS\tSIZE\tNOTE")
+	for _, a := range accounts {
+		fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%d KiB\t%s\n", a.id, a.created.Format(timeFormat), a.lastSeen.Format(timeFormat),
+			a.backups, (a.bytes+1023)/1024, a.note)
+	}
+	w.Flush()
+}
+
+func deleteAccount(args []string) {
+	c := newCommand("delete-account", "ID", 1)
+	yes := c.fs.Bool("yes", false, "don't ask for confirmation")
+	s := c.open(args, 1)
+	defer s.db.Close()
+	ctx := context.Background()
+	accounts, err := s.accounts(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	ids := make([]string, len(accounts))
+	for n, a := range accounts {
+		ids[n] = a.id
+	}
+	id, err := matchPrefix(c.fs.Arg(0), ids)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !*yes {
+		fmt.Printf("Delete account %s and all its backups? Its app recreates it, empty, on the next backup unless registration needs an invite. [y/N] ", id)
+		answer, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+		if strings.TrimSpace(strings.ToLower(answer)) != "y" {
+			fmt.Println("Cancelled")
+			return
+		}
+	}
+	if err := s.deleteAccount(ctx, id); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Deleted account %s\n", id)
 }

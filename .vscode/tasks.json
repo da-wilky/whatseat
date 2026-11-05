@@ -4,9 +4,46 @@
     {
       "label": "Server: create invite",
       "type": "shell",
-      "command": "go run . invite -db dev.sqlite -public-url http://10.0.2.2:8470",
+      "command": "go",
+      "args": ["run", ".", "invite", "-db", "dev.sqlite", "-public-url", "http://10.0.2.2:8470", "-note=${input:note}"],
+      "options": { "cwd": "${workspaceFolder}/server", "env": { "CGO_ENABLED": "0" } },
+      "problemMatcher": []
+    },
+    {
+      "label": "Server: list invites",
+      "type": "shell",
+      "command": "go",
+      "args": ["run", ".", "invites", "-db", "dev.sqlite"],
+      "options": { "cwd": "${workspaceFolder}/server", "env": { "CGO_ENABLED": "0" } },
+      "problemMatcher": []
+    },
+    {
+      "label": "Server: revoke invite",
+      "type": "shell",
+      "command": "go",
+      "args": ["run", ".", "revoke-invite", "-db", "dev.sqlite", "${input:id}"],
+      "options": { "cwd": "${workspaceFolder}/server", "env": { "CGO_ENABLED": "0" } },
+      "problemMatcher": []
+    },
+    {
+      "label": "Server: list accounts",
+      "type": "shell",
+      "command": "go",
+      "args": ["run", ".", "accounts", "-db", "dev.sqlite"],
+      "options": { "cwd": "${workspaceFolder}/server", "env": { "CGO_ENABLED": "0" } },
+      "problemMatcher": []
+    },
+    {
+      "label": "Server: delete account",
+      "type": "shell",
+      "command": "go",
+      "args": ["run", ".", "delete-account", "-db", "dev.sqlite", "${input:id}"],
       "options": { "cwd": "${workspaceFolder}/server", "env": { "CGO_ENABLED": "0" } },
       "problemMatcher": []
     }
+  ],
+  "inputs": [
+    { "id": "note", "type": "promptString", "description": "Who the invite is for (optional)" },
+    { "id": "id", "type": "promptString", "description": "ID or a unique prefix of it" }
   ]
 }

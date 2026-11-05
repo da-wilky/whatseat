@@ -154,10 +154,10 @@ func TestInviteOnly(t *testing.T) {
 	expect(t, status, http.StatusForbidden, "register with unknown invite")
 
 	ctx := context.Background()
-	if err := s.createInvite(ctx, inviteHash("ABCD2345"), time.Now().Add(time.Hour)); err != nil {
+	if err := s.createInvite(ctx, inviteHash("ABCD2345"), time.Now().Add(time.Hour), ""); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.createInvite(ctx, inviteHash("EXPIRED2"), time.Now().Add(-time.Hour)); err != nil {
+	if err := s.createInvite(ctx, inviteHash("EXPIRED2"), time.Now().Add(-time.Hour), ""); err != nil {
 		t.Fatal(err)
 	}
 	status, _ = do(t, server, "POST", "/v1/register", auth, `{"invite":"expired2"}`)
@@ -202,7 +202,7 @@ func TestInviteOnlyIgnoresMaxAccounts(t *testing.T) {
 	t.Cleanup(func() { s.db.Close() })
 	server := httptest.NewServer(newAPI(s, limits{registerPerHour: 100, maxAccounts: 0, maxBackups: 1, maxBackupBytes: 16, inviteOnly: true}))
 	t.Cleanup(server.Close)
-	if err := s.createInvite(context.Background(), inviteHash("ABCD2345"), time.Now().Add(time.Hour)); err != nil {
+	if err := s.createInvite(context.Background(), inviteHash("ABCD2345"), time.Now().Add(time.Hour), ""); err != nil {
 		t.Fatal(err)
 	}
 	status, _ := do(t, server, "POST", "/v1/register", account+"."+token, `{"invite":"ABCD2345"}`)
@@ -395,8 +395,8 @@ func TestRegisteringTwiceKeepsTheInvite(t *testing.T) {
 	}
 	t.Cleanup(func() { s.db.Close() })
 	ctx := context.Background()
-	s.createInvite(ctx, inviteHash("FIRST234"), time.Now().Add(time.Hour))
-	s.createInvite(ctx, inviteHash("SECOND23"), time.Now().Add(time.Hour))
+	s.createInvite(ctx, inviteHash("FIRST234"), time.Now().Add(time.Hour), "")
+	s.createInvite(ctx, inviteHash("SECOND23"), time.Now().Add(time.Hour), "")
 	hash := inviteHash("token")
 	if err := s.createAccount(ctx, account, hash, inviteHash("FIRST234"), 0); err != nil {
 		t.Fatal(err)
@@ -406,5 +406,57 @@ func TestRegisteringTwiceKeepsTheInvite(t *testing.T) {
 	}
 	if err := s.createAccount(ctx, "fedcba9876543210fedcba9876543210", hash, inviteHash("SECOND23"), 0); err != nil {
 		t.Fatalf("invite was used up by the failed registration: %v", err)
+	}
+}
+
+func TestAdminInvitesAndAccounts(t *testing.T) {
+	s, err := openStore(filepath.Join(t.TempDir(), "test.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { s.db.Close() })
+	ctx := context.Background()
+	s.createInvite(ctx, inviteHash("ANNA2345"), time.Now().Add(time.Hour), "Anna")
+	s.createInvite(ctx, inviteHash("BERT2345"), time.Now().Add(time.Hour), "Bert")
+	s.createInvite(ctx, inviteHash("OLD23456"), time.Now().Add(-time.Hour), "old")
+	invites, err := s.invites(ctx)
+	if err != nil || len(invites) != 2 || invites[0].note != "Anna" {
+		t.Fatalf("invites = %+v, %v", invites, err)
+	}
+
+	if err := s.deleteInvite(ctx, inviteHash("BERT2345")); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.createAccount(ctx, account, inviteHash("token"), inviteHash("BERT2345"), 0); !errors.Is(err, errInvalidInvite) {
+		t.Fatalf("revoked invite: %v", err)
+	}
+	if err := s.createAccount(ctx, account, inviteHash("token"), inviteHash("ANNA2345"), 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.write(ctx, account, "whatseat-backup-2026-11-04.json", []byte("12345"), 10); err != nil {
+		t.Fatal(err)
+	}
+	accounts, err := s.accounts(ctx)
+	if err != nil || len(accounts) != 1 || accounts[0].note != "Anna" || accounts[0].backups != 1 || accounts[0].bytes != 5 {
+		t.Fatalf("accounts = %+v, %v", accounts, err)
+	}
+
+	if err := s.deleteAccount(ctx, account); err != nil {
+		t.Fatal(err)
+	}
+	if data, err := s.read(ctx, account, "whatseat-backup-2026-11-04.json"); data != nil || err != nil {
+		t.Fatalf("backup survived its account: %q, %v", data, err)
+	}
+}
+
+func TestMatchPrefix(t *testing.T) {
+	ids := []string{"abc123", "abd456"}
+	if id, err := matchPrefix("ABC", ids); id != "abc123" || err != nil {
+		t.Fatalf("matchPrefix(ABC) = %q, %v", id, err)
+	}
+	for _, prefix := range []string{"ab", "x", ""} {
+		if id, err := matchPrefix(prefix, ids); err == nil {
+			t.Fatalf("matchPrefix(%q) = %q, want error", prefix, id)
+		}
 	}
 }

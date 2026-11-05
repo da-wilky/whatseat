@@ -7,10 +7,10 @@ let
     WHATSEAT_DB = "${stateDir}/whatseat.sqlite";
   } // lib.optionalAttrs (cfg.publicUrl != null) { WHATSEAT_PUBLIC_URL = cfg.publicUrl; };
   # Runs as the service user, so files SQLite creates next to the database stay writable for the server.
-  invite = pkgs.writeShellScriptBin "whatseat-server-invite" ''
+  ctl = pkgs.writeShellScriptBin "whatseat-server-ctl" ''
     exec ${pkgs.util-linux}/bin/runuser -u whatseat-server -- ${pkgs.coreutils}/bin/env \
       ${lib.concatStringsSep " " (lib.mapAttrsToList (k: v: "${k}=${lib.escapeShellArg v}") environment)} \
-      ${lib.getExe cfg.package} invite "$@"
+      ${lib.getExe cfg.package} "$@"
   '';
 in
 {
@@ -39,12 +39,12 @@ in
       type = lib.types.nullOr lib.types.str;
       default = null;
       example = "https://backup.example.org";
-      description = "Address as the app sees it. When set, `whatseat-server-invite` also prints a link that fills in server and invite.";
+      description = "Address as the app sees it. When set, `whatseat-server-ctl invite` also prints a link that fills in server and invite.";
     };
     inviteOnly = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "Register only with a single-use invite from `sudo whatseat-server-invite [validity, default 3d, e.g. 30m, 1h, 365d]`. maxAccounts then doesn't apply. Otherwise anyone reaching the server can register, up to maxAccounts.";
+      description = "Register only with a single-use invite from `sudo whatseat-server-ctl invite [-note TEXT] [validity, default 3d, e.g. 30m, 1h, 365d]`. maxAccounts then doesn't apply. Otherwise anyone reaching the server can register, up to maxAccounts.";
     };
     inactiveDays = lib.mkOption {
       type = lib.types.ints.unsigned;
@@ -85,7 +85,7 @@ in
       group = "whatseat-server";
     };
     users.groups.whatseat-server = { };
-    environment.systemPackages = [ invite ];
+    environment.systemPackages = [ ctl ];
 
     systemd.services.whatseat-server = {
       description = "WhatsEat backup server";

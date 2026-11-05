@@ -76,8 +76,15 @@ NixOS (it serves plain HTTP on localhost; the app requires HTTPS):
 }
 ```
 
-Invites: `sudo whatseat-server-invite [validity]` (default `3d`; e.g. `30m`, `1h`, `365d`) prints a single-use code and, with
-`publicUrl` set, a link that fills in server and invite when pasted in the app.
+Administration, as root via `sudo whatseat-server-ctl <command>` (outside NixOS `whatseat-server <command> -db FILE`):
+
+- `invite [-note TEXT] [validity]` (default `3d`; e.g. `30m`, `1h`, `365d`) prints a single-use code and, with `publicUrl`
+  set, a link that fills in server and invite when pasted in the app. The note (who it's for) carries over to the account.
+- `invites` / `revoke-invite ID` list and revoke unused invites.
+- `accounts` / `delete-account [-yes] ID` list accounts and delete one with its backups. With open registration the app
+  recreates a deleted account, empty, on its next backup.
+
+IDs may be shortened to any unique prefix.
 Outside NixOS every flag is also an env var: `WHATSEAT_INVITE_ONLY=true`, `WHATSEAT_INACTIVE_DAYS=365`, ….
 
 After changing `server/go.mod`, update `vendorHash` in `flake.nix`.
