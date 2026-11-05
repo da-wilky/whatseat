@@ -1187,7 +1187,7 @@ abstract class AppLocalizations {
   /// No description provided for @recoveryCodeSaved.
   ///
   /// In de, this message translates to:
-  /// **'Ich habe den Code notiert'**
+  /// **'Ich habe den Code sicher aufbewahrt'**
   String get recoveryCodeSaved;
 
   /// No description provided for @recoveryCodeCopy.

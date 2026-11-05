@@ -599,7 +599,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Write this code down and keep it safe, away from your phone. It is shown only now. Without it, no backup can be restored.';
 
   @override
-  String get recoveryCodeSaved => 'I have written down the code';
+  String get recoveryCodeSaved => 'I have stored the code safely';
 
   @override
   String get recoveryCodeCopy => 'Copy';

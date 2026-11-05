@@ -264,7 +264,7 @@
   "backupWrongCode": "Falscher Code",
   "recoveryCode": "Wiederherstellungscode",
   "recoveryCodeHint": "Notiere diesen Code und bewahre ihn sicher auf, getrennt von deinem Handy. Er wird nur jetzt angezeigt. Ohne ihn lässt sich kein Backup wiederherstellen.",
-  "recoveryCodeSaved": "Ich habe den Code notiert",
+  "recoveryCodeSaved": "Ich habe den Code sicher aufbewahrt",
   "recoveryCodeCopy": "Kopieren",
   "recoveryCodeCopied": "Kopiert",
   "recoveryCodeClipboardCleared": "Wird nach 2 Minuten aus der Zwischenablage gelöscht",

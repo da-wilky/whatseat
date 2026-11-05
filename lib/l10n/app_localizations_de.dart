@@ -603,7 +603,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Notiere diesen Code und bewahre ihn sicher auf, getrennt von deinem Handy. Er wird nur jetzt angezeigt. Ohne ihn lässt sich kein Backup wiederherstellen.';
 
   @override
-  String get recoveryCodeSaved => 'Ich habe den Code notiert';
+  String get recoveryCodeSaved => 'Ich habe den Code sicher aufbewahrt';
 
   @override
   String get recoveryCodeCopy => 'Kopieren';

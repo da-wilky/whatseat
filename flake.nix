@@ -100,7 +100,7 @@
       };
       packages.${system}.whatseat-server = pkgs.buildGoModule {
         pname = "whatseat-server";
-        version = "0.1.0";
+        version = "0.2.0";
         src = ./server;
         vendorHash = "sha256-zafxVNQsomtOwZ3RCyAeIgBg4Aj4Pf6yD3qZt6umd+Y=";
         meta.mainProgram = "whatseat-server";
