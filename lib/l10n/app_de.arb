@@ -54,6 +54,8 @@
   "amount": "Menge",
   "foodHint": "z. B. Vollkornbrot",
   "addItem": "Weiteres hinzufügen",
+  "addPart": "Zutat",
+  "partHint": "z. B. Tomate",
   "lastAmount": "zuletzt: {amount}",
   "@lastAmount": {
     "placeholders": {

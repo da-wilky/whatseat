@@ -54,7 +54,7 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
     if (_meals.isNotEmpty && !_meals.contains(e.meal)) return false;
     if (_incidentsOnly && !e.binge && e.measures.isEmpty) return false;
     final q = _query.toLowerCase();
-    return [e.withWhom, e.situationBefore, e.appetiteFor, e.situationAfter, e.measures, for (final i in e.items) i.food]
+    return [e.withWhom, e.situationBefore, e.appetiteFor, e.situationAfter, e.measures, for (final i in e.items) ...[i.food, for (final p in i.parts) p.food]]
         .any((s) => s.toLowerCase().contains(q));
   }
 
@@ -435,7 +435,7 @@ class _ProtocolCardState extends State<_ProtocolCard> {
                               child: Text(formatAmount(l, item),
                                   textAlign: TextAlign.right, style: body?.copyWith(color: scheme.onSurfaceVariant)),
                             ),
-                            Padding(padding: const EdgeInsets.only(bottom: 4), child: Text(item.food, style: body)),
+                            Padding(padding: const EdgeInsets.only(bottom: 4), child: Text(itemLabel(item), style: body)),
                           ]),
                       ],
                     ),

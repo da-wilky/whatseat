@@ -167,18 +167,32 @@ Future<void> finishEating(BuildContext context, MealEntry entry) async {
   await openEntryEditor(context, draft, mode: EditorMode.finish);
 }
 
+class _PartRow {
+  _PartRow(String name) : food = TextEditingController(text: name);
+
+  final TextEditingController food;
+  final focus = FocusNode();
+
+  void dispose() {
+    food.dispose();
+    focus.dispose();
+  }
+}
+
 class _ItemRow {
   _ItemRow(FoodItem item, String quantityText, {required this.touched})
       : drink = item.drink,
         quantity = TextEditingController(text: quantityText),
         unit = TextEditingController(text: item.unit),
-        food = TextEditingController(text: item.food);
+        food = TextEditingController(text: item.food),
+        parts = [for (final p in item.parts) _PartRow(p.food)];
 
   final bool drink;
   final TextEditingController quantity;
   final TextEditingController unit;
   final TextEditingController food;
   final foodFocus = FocusNode();
+  final List<_PartRow> parts;
 
   /// Untouched rows still hold the default amount and take over the last amount of a picked food.
   bool touched;
@@ -188,6 +202,9 @@ class _ItemRow {
     unit.dispose();
     food.dispose();
     foodFocus.dispose();
+    for (final p in parts) {
+      p.dispose();
+    }
   }
 }
 
@@ -218,6 +235,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
   late final _before = TextEditingController(text: _d.situationBefore);
   late final _after = TextEditingController(text: _d.situationAfter);
   List<FoodSuggestion> _foods = const [];
+  Map<String, List<String>> _partHistory = const {};
   List<String> _whoHistory = const [];
   List<String> _measureHistory = const [];
   List<String> _unitHistory = const [];
@@ -237,6 +255,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
   Future<void> _loadSuggestions() async {
     final db = ref.read(databaseProvider);
     final foods = await db.foodSuggestions();
+    final parts = await db.partHistory();
     final who = await db.tagHistory((e) => e.withWhom);
     final measures = await db.tagHistory((e) => e.measures);
     final units = await db.unitHistory(drink: false);
@@ -244,6 +263,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
     if (!mounted) return;
     setState(() {
       _foods = foods;
+      _partHistory = parts;
       _whoHistory = who;
       _measureHistory = measures;
       _unitHistory = units;
@@ -303,6 +323,31 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
     WidgetsBinding.instance.addPostFrameCallback((_) => row.dispose());
   }
 
+  void _addPart(_ItemRow row) {
+    final part = _PartRow('');
+    setState(() => row.parts.add(part));
+    WidgetsBinding.instance.addPostFrameCallback((_) => part.focus.requestFocus());
+  }
+
+  void _removePart(_ItemRow row, _PartRow part) {
+    _change(() => row.parts.remove(part));
+    WidgetsBinding.instance.addPostFrameCallback((_) => part.dispose());
+  }
+
+  /// Fills in what the picked food consisted of last time, unless parts were already entered.
+  void _prefillParts(_ItemRow row, FoodItem last) {
+    if (last.parts.isEmpty || row.parts.any((p) => p.food.text.trim().isNotEmpty)) return;
+    final old = [...row.parts];
+    _change(() => row.parts
+      ..clear()
+      ..addAll([for (final p in last.parts) _PartRow(p.food)]));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final p in old) {
+        p.dispose();
+      }
+    });
+  }
+
   List<FoodItem> _collectItems() => [
         for (final r in [..._foodRows, ..._drinkRows])
           if (r.food.text.trim().isNotEmpty)
@@ -311,6 +356,10 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
               unit: r.unit.text.trim(),
               food: r.food.text.trim(),
               drink: r.drink,
+              parts: [
+                for (final p in r.parts)
+                  if (p.food.text.trim().isNotEmpty) FoodItem(food: p.food.text.trim(), drink: r.drink),
+              ],
             ),
       ];
 
@@ -448,6 +497,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
             return amount.isEmpty ? null : l.lastAmount(amount);
           },
           onSelected: (f) {
+            _prefillParts(row, f.last);
             if (row.touched) return;
             _change(() {
               row.quantity.text = _formatQuantity(f.last.quantity);
@@ -465,6 +515,61 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
         ),
     ]);
   }
+
+  Widget _partRow(AppLocalizations l, _ItemRow row, _PartRow part) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 16, right: 8),
+          child: Icon(Icons.subdirectory_arrow_right_rounded, size: 20, color: theme.colorScheme.onSurfaceVariant),
+        ),
+        Expanded(
+          child: _SuggestField<String>(
+            controller: part.food,
+            focusNode: part.focus,
+            hint: l.partHint,
+            options: (q) {
+              final taken = {
+                for (final p in row.parts)
+                  if (p != part) p.food.text.trim().toLowerCase(),
+              };
+              return (_partHistory[AppDatabase.foodKey(FoodItem(food: row.food.text, drink: row.drink))] ?? const [])
+                  .where((p) => !taken.contains(p.toLowerCase()) && p.toLowerCase().contains(q.toLowerCase()))
+                  .take(8)
+                  .toList();
+            },
+            display: (p) => p,
+            onSelected: (_) => _markDirty(),
+            onChanged: _markDirty,
+          ),
+        ),
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.close_rounded),
+          onPressed: () => _removePart(row, part),
+        ),
+      ]),
+    );
+  }
+
+  Widget _itemWithParts(AppLocalizations l, int index, _ItemRow row) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _itemRow(l, index, row),
+          for (final part in row.parts) KeyedSubtree(key: ObjectKey(part), child: _partRow(l, row, part)),
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: TextButton.icon(
+              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+              onPressed: () => _addPart(row),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: Text(l.addPart),
+            ),
+          ),
+        ],
+      );
 
 
   @override
@@ -520,7 +625,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
         children: [
           for (final (i, row) in rows.indexed) ...[
             if (i > 0) const Divider(height: 24),
-            KeyedSubtree(key: ObjectKey(row), child: _itemRow(l, i, row)),
+            KeyedSubtree(key: ObjectKey(row), child: _itemWithParts(l, i, row)),
           ],
           if (rows.isNotEmpty) const SizedBox(height: 4),
           Align(

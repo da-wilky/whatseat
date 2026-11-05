@@ -54,6 +54,8 @@
   "amount": "Amount",
   "foodHint": "e.g. wholegrain bread",
   "addItem": "Add another",
+  "addPart": "Ingredient",
+  "partHint": "e.g. tomato",
   "lastAmount": "last: {amount}",
   "withWhom": "With whom",
   "withWhomDefaults": "alone|family|partner|friends|colleagues",

@@ -177,6 +177,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get addItem => 'Weiteres hinzufügen';
 
   @override
+  String get addPart => 'Zutat';
+
+  @override
+  String get partHint => 'z. B. Tomate';
+
+  @override
   String lastAmount(String amount) {
     return 'zuletzt: $amount';
   }

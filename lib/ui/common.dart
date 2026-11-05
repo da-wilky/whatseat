@@ -45,9 +45,12 @@ String formatAmount(AppLocalizations l, FoodItem item) {
   return [qText, unit].where((s) => s.isNotEmpty).join(' ');
 }
 
+String itemLabel(FoodItem item) =>
+    item.parts.isEmpty ? item.food : '${item.food} (${item.parts.map((p) => p.food).join(', ')})';
+
 String itemsSummary(AppLocalizations l, List<FoodItem> items) => items.map((i) {
       final amount = formatAmount(l, i);
-      return amount.isEmpty ? i.food : '$amount ${i.food}';
+      return amount.isEmpty ? itemLabel(i) : '$amount ${itemLabel(i)}';
     }).join(', ');
 
 String timeRange(int start, int? end) => end == null ? formatMinutes(start) : '${formatMinutes(start)}–${formatMinutes(end)}';

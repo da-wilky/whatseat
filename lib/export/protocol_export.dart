@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:csv/csv.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -41,6 +43,9 @@ String _noteText(AppLocalizations l, DayNote? n) => n == null
     ? ''
     : [if (n.diet) l.noteDiet, if (n.sick) l.noteSick, if (n.note.isNotEmpty) n.note].join(' · ');
 
+/// Proportions of the paper form's columns.
+const _columnFlex = <double>[70, 56, 135, 50, 62, 118, 50, 60, 137, 122];
+
 List<String> _headers(AppLocalizations l) => [
       l.colMeal,
       l.colWithWhom,
@@ -62,8 +67,44 @@ Future<Uint8List> buildProtocolPdf(AppLocalizations l, List<ProtocolDay> days, S
   const border = PdfColors.grey700;
   const small = pw.TextStyle(fontSize: 8);
 
+  final pageFormat = PdfPageFormat.a4.landscape;
+  const margin = pw.EdgeInsets.fromLTRB(32, 28, 32, 28);
+  const cellPadding = pw.EdgeInsets.all(4);
+
   pw.Widget cell(String text, {pw.TextStyle? style}) =>
-      pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(text, style: style ?? small));
+      pw.Padding(padding: cellPadding, child: pw.Text(text, style: style ?? small));
+
+  double textWidth(int column) =>
+      (pageFormat.width - margin.horizontal) * _columnFlex[column] / _columnFlex.reduce((a, b) => a + b) -
+      cellPadding.horizontal;
+
+  double textHeight(pw.Context context, String text, int column) =>
+      (pw.Text(text, style: small)..layout(context, pw.BoxConstraints(maxWidth: textWidth(column)))).box!.height;
+
+  // Amount and food are separate cells: each item gets the same height in both, so a wrapped name pushes the
+  // following amounts down with it.
+  List<pw.Widget> itemCells(pw.Context context, MealEntry e) {
+    final amounts = <pw.Widget>[];
+    final foods = <pw.Widget>[];
+    for (final item in e.items) {
+      final amount = formatAmount(l, item);
+      final food = itemLabel(item);
+      final height = math.max(textHeight(context, amount, 4), textHeight(context, food, 5));
+      for (final (texts, text) in [(amounts, amount), (foods, food)]) {
+        texts.add(pw.ConstrainedBox(
+          constraints: pw.BoxConstraints(minHeight: height),
+          child: pw.Text(text, style: small),
+        ));
+      }
+    }
+    return [
+      for (final texts in [amounts, foods])
+        pw.Padding(
+          padding: cellPadding,
+          child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: texts),
+        ),
+    ];
+  }
 
   pw.Widget headerField(String label, String value) => pw.Row(children: [
         pw.Text('$label ', style: const pw.TextStyle(fontSize: 11)),
@@ -83,8 +124,8 @@ Future<Uint8List> buildProtocolPdf(AppLocalizations l, List<ProtocolDay> days, S
   for (final day in printable) {
     final note = _noteText(l, day.note);
     doc.addPage(pw.MultiPage(
-      pageFormat: PdfPageFormat.a4.landscape,
-      margin: const pw.EdgeInsets.fromLTRB(32, 28, 32, 28),
+      pageFormat: pageFormat,
+      margin: margin,
       theme: pw.ThemeData.withFont(base: base, bold: bold),
       header: (_) => pw.Padding(
         padding: const pw.EdgeInsets.only(bottom: 10),
@@ -100,22 +141,10 @@ Future<Uint8List> buildProtocolPdf(AppLocalizations l, List<ProtocolDay> days, S
         alignment: pw.Alignment.centerRight,
         child: pw.Text('${context.pageNumber} / ${context.pagesCount}', style: small),
       ),
-      build: (_) => [
+      build: (context) => [
         pw.Table(
           border: pw.TableBorder.all(color: border, width: 0.6),
-          // Proportions of the paper form's columns.
-          columnWidths: const {
-            0: pw.FlexColumnWidth(70),
-            1: pw.FlexColumnWidth(56),
-            2: pw.FlexColumnWidth(135),
-            3: pw.FlexColumnWidth(50),
-            4: pw.FlexColumnWidth(62),
-            5: pw.FlexColumnWidth(118),
-            6: pw.FlexColumnWidth(50),
-            7: pw.FlexColumnWidth(60),
-            8: pw.FlexColumnWidth(137),
-            9: pw.FlexColumnWidth(122),
-          },
+          columnWidths: {for (final (i, flex) in _columnFlex.indexed) i: pw.FlexColumnWidth(flex)},
           children: [
             pw.TableRow(
               repeat: true,
@@ -128,8 +157,7 @@ Future<Uint8List> buildProtocolPdf(AppLocalizations l, List<ProtocolDay> days, S
                 cell(e.withWhom),
                 cell(_situationBefore(l, e)),
                 cell(_percent(e.hunger)),
-                cell(e.items.map((i) => formatAmount(l, i)).join('\n')),
-                cell(e.items.map((i) => i.food).join('\n')),
+                ...itemCells(context, e),
                 cell(_percent(e.satiety)),
                 cell(e.binge ? l.yes : l.no),
                 cell(e.measures),
@@ -184,7 +212,7 @@ String buildProtocolCsv(AppLocalizations l, List<ProtocolDay> days) {
           e.appetiteFor,
           e.hunger ?? '',
           e.items.map((i) => formatAmount(l, i)).join('; '),
-          e.items.map((i) => i.food).join('; '),
+          e.items.map(itemLabel).join('; '),
           e.satiety ?? '',
           e.binge ? l.yes : l.no,
           e.measures,

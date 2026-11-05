@@ -130,6 +130,29 @@ void main() {
     expect(s.count, 2);
   });
 
+  test('parts round-trip and are only proposed under their parent', () async {
+    const salad = FoodItem(
+      quantity: 1,
+      unit: 'Portion',
+      food: 'Salat',
+      parts: [FoodItem(food: 'Karotte'), FoodItem(food: 'Tomate')],
+    );
+    expect(FoodItem.fromJson(jsonDecode(jsonEncode(salad.toJson())) as Map<String, dynamic>).parts.map((p) => p.food),
+        ['Karotte', 'Tomate']);
+    expect(FoodItem.fromJson(const {'food': 'Brot'}).parts, isEmpty);
+
+    await db.saveEntry(_entry('2026-10-28', 12 * 60, const [
+      FoodItem(food: 'Salat', parts: [FoodItem(food: 'tomate')]),
+      FoodItem(food: 'Brot'),
+    ]));
+    await db.saveEntry(_entry('2026-10-29', 12 * 60, const [salad]));
+
+    final history = await db.partHistory();
+    expect(history.keys, [AppDatabase.foodKey(salad)]);
+    expect(history[AppDatabase.foodKey(salad)], ['Tomate', 'Karotte']);
+    expect((await db.foodSuggestions()).firstWhere((s) => s.food == 'Salat').last.parts, hasLength(2));
+  });
+
   test('backup import keeps the newer row', () async {
     await db.saveEntry(_entry('2026-10-29', 12 * 60, const [FoodItem(food: 'Nudeln')]));
     final backup = await db.exportBackup();

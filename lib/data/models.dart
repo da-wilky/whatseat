@@ -14,7 +14,7 @@ MealType mealTypeForTime(int minutes) {
 }
 
 class FoodItem {
-  const FoodItem({this.quantity, this.unit = '', required this.food, this.drink = false});
+  const FoodItem({this.quantity, this.unit = '', required this.food, this.drink = false, this.parts = const []});
 
   final double? quantity;
 
@@ -23,9 +23,19 @@ class FoodItem {
   final String food;
   final bool drink;
 
-  Map<String, dynamic> toJson() => {'quantity': quantity, 'unit': unit, 'food': food, 'drink': drink};
+  /// What the item consisted of, e.g. the ingredients of a salad; one level deep.
+  final List<FoodItem> parts;
 
-  factory FoodItem.fromJson(Map<String, dynamic> json) {
+  Map<String, dynamic> toJson() => {
+        'quantity': quantity,
+        'unit': unit,
+        'food': food,
+        'drink': drink,
+        if (parts.isNotEmpty) 'parts': [for (final p in parts) p.toJson()],
+      };
+
+  /// Parts of parts are dropped: the UI has one level, and backups are untrusted input.
+  factory FoodItem.fromJson(Map<String, dynamic> json, {bool withParts = true}) {
     final legacyAmount = json['amount'] as String?;
     if (legacyAmount != null) {
       final match = RegExp(r'^\s*([\d.,]+)?\s*(.*)$').firstMatch(legacyAmount)!;
@@ -40,6 +50,11 @@ class FoodItem {
       unit: json['unit'] as String? ?? '',
       food: json['food'] as String,
       drink: json['drink'] as bool? ?? false,
+      parts: [
+        if (withParts)
+          for (final p in json['parts'] as List? ?? const [])
+            FoodItem.fromJson(p as Map<String, dynamic>, withParts: false),
+      ],
     );
   }
 }

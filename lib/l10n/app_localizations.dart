@@ -422,6 +422,18 @@ abstract class AppLocalizations {
   /// **'Weiteres hinzufügen'**
   String get addItem;
 
+  /// No description provided for @addPart.
+  ///
+  /// In de, this message translates to:
+  /// **'Zutat'**
+  String get addPart;
+
+  /// No description provided for @partHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z. B. Tomate'**
+  String get partHint;
+
   /// No description provided for @lastAmount.
   ///
   /// In de, this message translates to:

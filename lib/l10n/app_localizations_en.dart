@@ -176,6 +176,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addItem => 'Add another';
 
   @override
+  String get addPart => 'Ingredient';
+
+  @override
+  String get partHint => 'e.g. tomato';
+
+  @override
   String lastAmount(String amount) {
     return 'last: $amount';
   }

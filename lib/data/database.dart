@@ -173,9 +173,8 @@ class AppDatabase extends _$AppDatabase {
     final byFood = <String, FoodSuggestion>{};
     for (final e in await _history()) {
       for (final item in e.items) {
-        final name = item.food.trim().toLowerCase();
-        if (name.isEmpty) continue;
-        final key = '${item.drink}|$name';
+        if (item.food.trim().isEmpty) continue;
+        final key = foodKey(item);
         final known = byFood[key];
         byFood[key] = known == null
             ? FoodSuggestion(item, 1)
@@ -183,6 +182,29 @@ class AppDatabase extends _$AppDatabase {
       }
     }
     return byFood.values.toList()..sort((a, b) => b.count.compareTo(a.count));
+  }
+
+  static String foodKey(FoodItem item) => '${item.drink}|${item.food.trim().toLowerCase()}';
+
+  /// Part names per [foodKey] of their parent, most used first; parts are only proposed under the same parent.
+  Future<Map<String, List<String>>> partHistory() async {
+    // Per parent: lower-cased part name -> (most recent spelling, count).
+    final byParent = <String, Map<String, (String, int)>>{};
+    for (final e in await _history()) {
+      for (final item in e.items) {
+        for (final part in item.parts) {
+          final name = part.food.trim();
+          if (name.isEmpty) continue;
+          final parts = byParent.putIfAbsent(foodKey(item), () => {});
+          final known = parts[name.toLowerCase()];
+          parts[name.toLowerCase()] = (known?.$1 ?? name, (known?.$2 ?? 0) + 1);
+        }
+      }
+    }
+    return {
+      for (final MapEntry(:key, value: parts) in byParent.entries)
+        key: (parts.values.toList()..sort((a, b) => b.$2.compareTo(a.$2))).map((p) => p.$1).toList(),
+    };
   }
 
   Future<List<String>> unitHistory({required bool drink}) async {
