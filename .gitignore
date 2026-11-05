@@ -70,3 +70,7 @@ key.properties
 whatseat-backup-*.json
 essprotokoll_*.csv
 essprotokoll_*.pdf
+
+# Local dev server database
+/server/dev.sqlite*
+/server/__debug_bin*

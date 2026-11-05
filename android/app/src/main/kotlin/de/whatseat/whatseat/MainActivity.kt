@@ -1,7 +1,10 @@
 package de.whatseat.whatseat
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
+import android.os.PersistableBundle
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
 import android.view.WindowManager
@@ -48,6 +51,17 @@ class MainActivity : FlutterFragmentActivity() {
                 } else {
                     window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
                 }
+                result.success(null)
+            } else {
+                result.notImplemented()
+            }
+        }
+        MethodChannel(messenger, "whatseat/clipboard").setMethodCallHandler { call, result ->
+            if (call.method == "copySensitive") {
+                val clip = ClipData.newPlainText("", call.arguments as String)
+                // ClipDescription.EXTRA_IS_SENSITIVE from API 33; keyboards honour the same key on older versions.
+                clip.description.extras = PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
+                getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
                 result.success(null)
             } else {
                 result.notImplemented()

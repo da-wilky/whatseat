@@ -63,6 +63,21 @@ Future<bool> authenticateBiometric(String reason) async {
   }
 }
 
+bool _lockSecure = false;
+int _secretsShown = 0;
+
+Future<void> _syncSecureWindow() async {
+  // FLAG_SECURE blanks emulator screenshots and screen mirroring, which debugging relies on.
+  if (kDebugMode || (!Platform.isAndroid && !Platform.isIOS)) return;
+  await _windowChannel.invokeMethod('setSecure', _lockSecure || _secretsShown > 0);
+}
+
+/// Blocks screenshots and the app-switcher preview while a secret is on screen, even with the app lock off.
+Future<void> setSecretShown(bool shown) {
+  _secretsShown += shown ? 1 : -1;
+  return _syncSecureWindow();
+}
+
 int _suspended = 0;
 
 /// For flows that leave the app on purpose (share sheet, file picker), which would otherwise re-lock it.
@@ -103,10 +118,9 @@ class _AppLockGateState extends ConsumerState<AppLockGate> with WidgetsBindingOb
     super.dispose();
   }
 
-  Future<void> _applySecureWindow(bool secure) async {
-    // FLAG_SECURE blanks emulator screenshots and screen mirroring, which debugging relies on.
-    if (kDebugMode || (!Platform.isAndroid && !Platform.isIOS)) return;
-    await _windowChannel.invokeMethod('setSecure', secure);
+  Future<void> _applySecureWindow(bool secure) {
+    _lockSecure = secure;
+    return _syncSecureWindow();
   }
 
   @override

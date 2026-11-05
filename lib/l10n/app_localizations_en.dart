@@ -596,6 +596,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recoveryCodeSaved => 'I have written down the code';
 
   @override
+  String get recoveryCodeCopy => 'Copy';
+
+  @override
+  String get recoveryCodeCopied => 'Code copied';
+
+  @override
+  String get recoveryCodeDownload => 'Save as file';
+
+  @override
+  String recoveryCodeSaveFailed(String error) {
+    return 'Saving failed: $error';
+  }
+
+  @override
   String get backupLocation => 'Location';
 
   @override
@@ -613,6 +627,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serverInviteLabel => 'From whoever runs the server';
+
+  @override
+  String get serverInviteInvalid => 'Invalid or expired invite code';
 
   @override
   String get serverInactivityTitle => 'Inactive accounts are deleted';

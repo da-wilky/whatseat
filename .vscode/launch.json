@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Server (debug)",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/server",
+      "cwd": "${workspaceFolder}/server",
+      // The nix shell compiles C with _FORTIFY_SOURCE, which fails on the debugger's -O0 cgo build; the server is pure Go anyway.
+      "env": { "CGO_ENABLED": "0" },
+      // No reverse proxy in front, so the connection's address is the client's. The emulator reaches it as http://10.0.2.2:8470.
+      "args": ["-invite-only", "-client-ip-header=", "-db", "dev.sqlite", "-listen", "127.0.0.1:8470"]
+    }
+  ]
+}

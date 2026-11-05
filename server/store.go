@@ -151,6 +151,13 @@ func (s *store) createInvite(ctx context.Context, codeHash []byte, expires time.
 	return err
 }
 
+func (s *store) inviteValid(ctx context.Context, codeHash []byte) (bool, error) {
+	var valid bool
+	err := s.db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM invites WHERE code_hash = ? AND expires_at > ?)`,
+		codeHash, time.Now().UnixMilli()).Scan(&valid)
+	return valid, err
+}
+
 // purge deletes accounts unseen for longer than inactive, with their backups, and expired invites.
 // A zero inactive keeps all accounts. It runs every interval; a longer gap since the last run means the server
 // was down or the clock jumped, and that time is credited to every account instead of counting as inactivity.

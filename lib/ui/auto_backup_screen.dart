@@ -1,4 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -10,6 +15,8 @@ import '../lock/app_lock.dart';
 import '../providers.dart';
 import 'backup_dialogs.dart';
 import 'entry_editor.dart' show showTextDialog;
+
+const _clipboardChannel = MethodChannel('whatseat/clipboard');
 
 void _snack(BuildContext context, String text) =>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
@@ -92,9 +99,28 @@ Future<ChosenDestination?> _chooseServer(BuildContext context, {required bool re
   if (restoring) {
     code = await askRecoveryCode(context);
   } else {
-    if (info.inviteOnly && invite == null) {
-      invite = await showTextDialog(context, title: l.serverInvite, label: l.serverInviteLabel);
-      if (invite == null || invite.isEmpty || !context.mounted) return null;
+    if (info.inviteOnly) {
+      Future<String?> check(String candidate) async {
+        if (candidate.isEmpty) return l.serverInviteInvalid;
+        try {
+          return await ServerDestination.checkInvite(url, candidate) ? null : l.serverInviteInvalid;
+        } on BackupDestinationException catch (e) {
+          return l.backupLocationFailed('$e');
+        }
+      }
+
+      final fromLink = invite;
+      final linkError = fromLink == null ? null : await withBusyDialog(context, () => check(fromLink));
+      if (!context.mounted) return null;
+      if (fromLink == null || linkError != null) {
+        invite = await showTextDialog(context,
+            title: l.serverInvite,
+            label: l.serverInviteLabel,
+            initial: fromLink ?? '',
+            error: linkError,
+            validate: check);
+        if (invite == null || !context.mounted) return null;
+      }
     }
     if (info.inactiveDays > 0) {
       final accepted = await showDialog<bool>(
@@ -429,7 +455,7 @@ class AutoBackupScreen extends ConsumerWidget {
   }
 }
 
-/// The code is shown once; continuing requires confirming it was written down.
+/// The code is shown once; continuing requires copying or saving it, then confirming it was kept.
 class _RecoveryCodeDialog extends StatefulWidget {
   const _RecoveryCodeDialog({required this.code});
 
@@ -440,7 +466,47 @@ class _RecoveryCodeDialog extends StatefulWidget {
 }
 
 class _RecoveryCodeDialogState extends State<_RecoveryCodeDialog> {
+  bool _exported = false;
   bool _saved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    setSecretShown(true);
+  }
+
+  @override
+  void dispose() {
+    setSecretShown(false);
+    super.dispose();
+  }
+
+  Future<void> _copy() async {
+    // Marked sensitive, so keyboards keep it out of their clipboard history and Android hides the preview.
+    if (Platform.isAndroid || Platform.isIOS) {
+      await _clipboardChannel.invokeMethod('copySensitive', widget.code);
+    } else {
+      await Clipboard.setData(ClipboardData(text: widget.code));
+    }
+    if (!mounted) return;
+    setState(() => _exported = true);
+    _snack(context, AppLocalizations.of(context).recoveryCodeCopied);
+  }
+
+  Future<void> _download() async {
+    final Uri? uri;
+    try {
+      uri = await withoutRelock(() => FilePicker.saveFile(
+            fileName: 'whatseat-recovery-code.txt',
+            bytes: utf8.encode('${widget.code}\n'),
+            mimeType: 'text/plain',
+          ));
+    } on Exception catch (e) {
+      if (mounted) _snack(context, AppLocalizations.of(context).recoveryCodeSaveFailed('$e'));
+      return;
+    }
+    if (uri != null && mounted) setState(() => _exported = true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -461,17 +527,40 @@ class _RecoveryCodeDialogState extends State<_RecoveryCodeDialog> {
               color: theme.colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(
+            child: SelectableText(
               widget.code,
+              // Copying the selection goes through the sensitive copy; sharing it to other apps is left out.
+              contextMenuBuilder: (context, state) => AdaptiveTextSelectionToolbar.buttonItems(
+                anchors: state.contextMenuAnchors,
+                buttonItems: [
+                  for (final item in state.contextMenuButtonItems)
+                    if (item.type == ContextMenuButtonType.copy)
+                      item.copyWith(onPressed: () {
+                        state.hideToolbar();
+                        _copy();
+                      })
+                    else if (item.type == ContextMenuButtonType.selectAll)
+                      item,
+                ],
+              ),
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium?.copyWith(fontFamily: 'monospace', letterSpacing: 1.5),
             ),
           ),
           const SizedBox(height: 8),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            children: [
+              TextButton.icon(onPressed: _copy, icon: const Icon(Icons.copy), label: Text(l.recoveryCodeCopy)),
+              TextButton.icon(
+                  onPressed: _download, icon: const Icon(Icons.download), label: Text(l.recoveryCodeDownload)),
+            ],
+          ),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
             value: _saved,
-            onChanged: (v) => setState(() => _saved = v!),
+            onChanged: _exported ? (v) => setState(() => _saved = v!) : null,
             title: Text(l.recoveryCodeSaved),
           ),
         ],

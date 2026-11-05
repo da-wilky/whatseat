@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 class BackupDestinationException implements Exception {
@@ -50,7 +51,10 @@ sealed class BackupDestination {
 String httpsBaseUrl(String url) {
   final normalized = url.endsWith('/') ? url : '$url/';
   final uri = Uri.tryParse(normalized);
-  if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+  // Debug builds also reach a local dev server; the emulator sees the host's loopback as 10.0.2.2.
+  final localDev =
+      kDebugMode && uri?.scheme == 'http' && const {'10.0.2.2', 'localhost', '127.0.0.1'}.contains(uri?.host);
+  if (uri == null || (uri.scheme != 'https' && !localDev) || uri.host.isEmpty) {
     throw const FormatException('Needs an https:// address');
   }
   return normalized;
@@ -156,6 +160,15 @@ final class ServerDestination extends BackupDestination {
     final (status, body) = await _send('GET', Uri.parse(httpsBaseUrl(url)).resolve('v1/info'), null);
     _expect('Info', status, {200});
     return _parse(body, ServerInfo.fromJson);
+  }
+
+  /// Whether [invite] would be accepted, without using it up. Servers from before this check count it as valid.
+  static Future<bool> checkInvite(String url, String invite) async {
+    final (status, _) = await _send('POST', Uri.parse(httpsBaseUrl(url)).resolve('v1/invite/check'), null,
+        body: utf8.encode(jsonEncode({'invite': invite})), headers: {'Content-Type': 'application/json'});
+    if (status == 403) return false;
+    _expect('Invite check', status, {204, 404});
+    return true;
   }
 
   /// Creates the account on first use, using up [invite]; with an existing account it just checks the login.

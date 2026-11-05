@@ -1178,6 +1178,30 @@ abstract class AppLocalizations {
   /// **'Ich habe den Code notiert'**
   String get recoveryCodeSaved;
 
+  /// No description provided for @recoveryCodeCopy.
+  ///
+  /// In de, this message translates to:
+  /// **'Kopieren'**
+  String get recoveryCodeCopy;
+
+  /// No description provided for @recoveryCodeCopied.
+  ///
+  /// In de, this message translates to:
+  /// **'Code kopiert'**
+  String get recoveryCodeCopied;
+
+  /// No description provided for @recoveryCodeDownload.
+  ///
+  /// In de, this message translates to:
+  /// **'Als Datei speichern'**
+  String get recoveryCodeDownload;
+
+  /// No description provided for @recoveryCodeSaveFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern fehlgeschlagen: {error}'**
+  String recoveryCodeSaveFailed(String error);
+
   /// No description provided for @backupLocation.
   ///
   /// In de, this message translates to:
@@ -1213,6 +1237,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Vom Betreiber des Servers erhalten'**
   String get serverInviteLabel;
+
+  /// No description provided for @serverInviteInvalid.
+  ///
+  /// In de, this message translates to:
+  /// **'Ungültiger oder abgelaufener Einladungscode'**
+  String get serverInviteInvalid;
 
   /// No description provided for @serverInactivityTitle.
   ///

@@ -73,6 +73,7 @@ func newAPI(s *store, l limits) http.Handler {
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	mux.HandleFunc("GET /v1/info", a.info)
 	mux.HandleFunc("POST /v1/register", a.register)
+	mux.HandleFunc("POST /v1/invite/check", a.checkInvite)
 	mux.HandleFunc("POST /v1/ping", a.authed(a.info))
 	mux.HandleFunc("DELETE /v1/account", a.authed(a.deleteAccount))
 	mux.HandleFunc("GET /v1/backups", a.authed(a.list))
@@ -144,14 +145,10 @@ func (a *api) register(w http.ResponseWriter, r *http.Request) {
 	}
 	var invite []byte
 	if a.limits.inviteOnly {
-		var body struct {
-			Invite string `json:"invite"`
-		}
-		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<10)).Decode(&body); err != nil || body.Invite == "" {
+		if invite, ok = readInvite(w, r); !ok {
 			http.Error(w, "this server needs an invite to register", http.StatusForbidden)
 			return
 		}
-		invite = inviteHash(body.Invite)
 	}
 	switch err := a.store.createAccount(r.Context(), account, hash, invite, a.limits.maxAccounts); {
 	case errors.Is(err, errAccountExists):
@@ -166,6 +163,44 @@ func (a *api) register(w http.ResponseWriter, r *http.Request) {
 		internalError(w, err)
 	default:
 		w.WriteHeader(http.StatusCreated)
+	}
+}
+
+func readInvite(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
+	var body struct {
+		Invite string `json:"invite"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<10)).Decode(&body); err != nil || body.Invite == "" {
+		return nil, false
+	}
+	return inviteHash(body.Invite), true
+}
+
+// checkInvite lets the app reject a wrong invite before showing the recovery code, without using it up.
+// It shares the registration limit, so it doesn't make guessing invites any faster.
+func (a *api) checkInvite(w http.ResponseWriter, r *http.Request) {
+	client, err := a.clientAddress(r)
+	if err != nil {
+		internalError(w, err)
+		return
+	}
+	if !a.allowRegistration(client, time.Now()) {
+		w.Header().Set("Retry-After", "3600")
+		http.Error(w, "too many attempts, try again later", http.StatusTooManyRequests)
+		return
+	}
+	invite, ok := readInvite(w, r)
+	if !ok {
+		http.Error(w, "missing invite", http.StatusBadRequest)
+		return
+	}
+	switch valid, err := a.store.inviteValid(r.Context(), invite); {
+	case err != nil:
+		internalError(w, err)
+	case !valid:
+		http.Error(w, "invalid or expired invite", http.StatusForbidden)
+	default:
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 

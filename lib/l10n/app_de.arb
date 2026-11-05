@@ -263,12 +263,24 @@
   "recoveryCode": "Wiederherstellungscode",
   "recoveryCodeHint": "Notiere diesen Code und bewahre ihn sicher auf, getrennt von deinem Handy. Er wird nur jetzt angezeigt. Ohne ihn lässt sich kein Backup wiederherstellen.",
   "recoveryCodeSaved": "Ich habe den Code notiert",
+  "recoveryCodeCopy": "Kopieren",
+  "recoveryCodeCopied": "Code kopiert",
+  "recoveryCodeDownload": "Als Datei speichern",
+  "recoveryCodeSaveFailed": "Speichern fehlgeschlagen: {error}",
+  "@recoveryCodeSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "backupLocation": "Speicherort",
   "backupLocationServer": "WhatsEat-Server",
   "backupLocationServerHint": "Eigener Server, Anmeldung nur mit dem Wiederherstellungscode",
   "serverUrl": "Server-Adresse oder Einladungslink",
   "serverInvite": "Einladungscode",
   "serverInviteLabel": "Vom Betreiber des Servers erhalten",
+  "serverInviteInvalid": "Ungültiger oder abgelaufener Einladungscode",
   "serverInactivityTitle": "Inaktive Konten werden gelöscht",
   "serverInactivityWarning": "Dieser Server löscht Konten nach {days} Tagen ohne Aktivität – mitsamt allen Backups darauf.\n\nAls Aktivität zählt jeder Start der App und jedes Backup. Das Melden beim App-Start kannst du in den Einstellungen abschalten.",
   "@serverInactivityWarning": {

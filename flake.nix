@@ -29,7 +29,7 @@
       shellFor = android:
         let sdk = "${android.androidsdk}/libexec/android-sdk";
         in pkgs.mkShell {
-          packages = [ pkgs.flutter pkgs.jdk17 pkgs.jq android.androidsdk ];
+          packages = [ pkgs.flutter pkgs.jdk17 pkgs.jq android.androidsdk pkgs.go pkgs.gopls pkgs.delve ];
           ANDROID_HOME = sdk;
           ANDROID_SDK_ROOT = sdk;
           JAVA_HOME = pkgs.jdk17.home;

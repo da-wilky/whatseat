@@ -1,0 +1,12 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Server: create invite",
+      "type": "shell",
+      "command": "go run . invite -db dev.sqlite -public-url http://10.0.2.2:8470",
+      "options": { "cwd": "${workspaceFolder}/server", "env": { "CGO_ENABLED": "0" } },
+      "problemMatcher": []
+    }
+  ]
+}

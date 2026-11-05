@@ -659,19 +659,28 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
   }
 }
 
-Future<String?> showTextDialog(BuildContext context, {required String title, String initial = '', String? label}) =>
+/// [validate] returns an error to show under the field, keeping the dialog open; null accepts the value.
+Future<String?> showTextDialog(BuildContext context,
+        {required String title,
+        String initial = '',
+        String? label,
+        String? error,
+        Future<String?> Function(String value)? validate}) =>
     showDialog<String>(
       context: context,
-      builder: (_) => _TextDialog(title: title, initial: initial, label: label),
+      builder: (_) =>
+          _TextDialog(title: title, initial: initial, label: label, initialError: error, validate: validate),
     );
 
 /// Owns its controller so it is disposed only after the closing animation, not when the future completes.
 class _TextDialog extends StatefulWidget {
-  const _TextDialog({required this.title, required this.initial, this.label});
+  const _TextDialog({required this.title, required this.initial, this.label, this.initialError, this.validate});
 
   final String title;
   final String initial;
   final String? label;
+  final String? initialError;
+  final Future<String?> Function(String value)? validate;
 
   @override
   State<_TextDialog> createState() => _TextDialogState();
@@ -679,11 +688,33 @@ class _TextDialog extends StatefulWidget {
 
 class _TextDialogState extends State<_TextDialog> {
   late final _controller = TextEditingController(text: widget.initial);
+  late String? _error = widget.initialError;
+  bool _checking = false;
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_checking) return;
+    final value = _controller.text.trim();
+    final validate = widget.validate;
+    if (validate != null) {
+      setState(() {
+        _checking = true;
+        _error = null;
+      });
+      final error = await validate(value);
+      if (!mounted) return;
+      setState(() {
+        _checking = false;
+        _error = error;
+      });
+      if (error != null) return;
+    }
+    Navigator.pop(context, value);
   }
 
   @override
@@ -694,12 +725,22 @@ class _TextDialogState extends State<_TextDialog> {
       content: TextField(
         controller: _controller,
         autofocus: true,
-        decoration: InputDecoration(labelText: widget.label),
-        onSubmitted: (v) => Navigator.pop(context, v.trim()),
+        // Read-only rather than disabled keeps the keyboard up; edits mid-check would be popped unchecked.
+        readOnly: _checking,
+        decoration: InputDecoration(labelText: widget.label, errorText: _error, errorMaxLines: 3),
+        onChanged: (_) {
+          if (_error != null) setState(() => _error = null);
+        },
+        onSubmitted: (_) => _submit(),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(l.cancel)),
-        FilledButton(onPressed: () => Navigator.pop(context, _controller.text.trim()), child: Text(l.ok)),
+        FilledButton(
+          onPressed: _checking ? null : _submit,
+          child: _checking
+              ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : Text(l.ok),
+        ),
       ],
     );
   }

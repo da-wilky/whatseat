@@ -33,6 +33,18 @@ import UniformTypeIdentifiers
         self?.privacyCoverEnabled = secure
         result(nil)
       }
+    FlutterMethodChannel(name: "whatseat/clipboard", binaryMessenger: registrar.messenger())
+      .setMethodCallHandler { call, result in
+        guard call.method == "copySensitive", let text = call.arguments as? String else {
+          result(FlutterMethodNotImplemented)
+          return
+        }
+        // Kept off Universal Clipboard and cleared after a few minutes.
+        UIPasteboard.general.setItems(
+          [[UTType.utf8PlainText.identifier: text]],
+          options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(5 * 60)])
+        result(nil)
+      }
     FlutterMethodChannel(name: "whatseat/storage", binaryMessenger: registrar.messenger())
       .setMethodCallHandler { call, result in
         guard call.method == "excludeFromBackup", let paths = call.arguments as? [String] else {
