@@ -4,7 +4,7 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// build-apk.sh unpacks the keystore from Infisical here for the duration of the build only.
+// `nix run path:.#apk` unpacks the keystore from Infisical here for the duration of the build only.
 val keystoreFile = rootProject.file("../build/tmp/whatseat.p12")
 val signingReady = keystoreFile.exists() && System.getenv("KEYSTORE_PASSWORD") != null
 

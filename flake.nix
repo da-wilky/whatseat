@@ -92,6 +92,57 @@
           esac
         '';
       };
+      apkDir = "/mnt/pibackups";
+      checkoutGuard = ''
+        if [ ! -f pubspec.yaml ]; then
+          echo "run from the WhatsEat checkout" >&2
+          exit 1
+        fi
+        version="$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)"
+      '';
+      # Signed release APK, arm64 only (every current phone; the other ABIs would triple the size). The keystore lives
+      # in Infisical (see README) and exists on disk only while Gradle runs.
+      apkApp = pkgs.writeShellApplication {
+        name = "whatseat-apk";
+        runtimeInputs = [ pkgs.infisical pkgs.coreutils pkgs.gnused ];
+        text = checkoutGuard + ''
+          # The target is a mount, which fails more often than the build; fail before building.
+          if [ ! -d ${apkDir} ]; then
+            echo "${apkDir} missing -- is the mount up?" >&2
+            exit 1
+          fi
+
+          # shellcheck disable=SC2016 # expanded by the inner shell, which alone has the secrets
+          infisical run --projectId 037393a2-6c04-42e4-b0d6-a16985200880 --env="''${INFISICAL_ENV:-prod}" --path /whatseat -- bash -c '
+            set -euo pipefail
+            trap "rm -f $1" EXIT
+            mkdir -p "$(dirname "$1")"
+            echo "$KEYSTORE_BASE64" | tr -d "[:space:]" | base64 -d > "$1"
+            nix develop path:. -c flutter build apk --release --target-platform android-arm64
+          ' _ build/tmp/whatseat.p12
+
+          # Named by version, otherwise every build overwrites the previous one.
+          target="${apkDir}/whatseat-$version.apk"
+          built=build/app/outputs/flutter-apk/app-release.apk
+          # cp, not mv: the SMB mount has no POSIX permissions and mv complains on every run.
+          cp --no-preserve=mode "$built" "$target"
+          rm "$built"
+          echo "APK -> $target"
+        '';
+      };
+      # The tag must be pushed already; its message becomes the release notes.
+      releaseApp = pkgs.writeShellApplication {
+        name = "whatseat-release";
+        runtimeInputs = [ pkgs.gh pkgs.gnused ];
+        text = checkoutGuard + ''
+          apk="${apkDir}/whatseat-$version.apk"
+          if [ ! -f "$apk" ]; then
+            echo "$apk missing -- build it with: nix run path:.#apk" >&2
+            exit 1
+          fi
+          gh release create "v$version" "$apk" --verify-tag --notes-from-tag --title "WhatsEat $version"
+        '';
+      };
     in
     {
       devShells.${system} = {
@@ -106,10 +157,22 @@
         meta.mainProgram = "whatseat-server";
       };
       nixosModules.whatseat-server = import ./server/module.nix { inherit self; };
-      apps.${system}.emulator = {
-        type = "app";
-        program = "${emulatorApp}/bin/whatseat-emulator";
-        meta.description = "Headless Android emulator for testing over SSH";
+      apps.${system} = {
+        emulator = {
+          type = "app";
+          program = "${emulatorApp}/bin/whatseat-emulator";
+          meta.description = "Headless Android emulator for testing over SSH";
+        };
+        apk = {
+          type = "app";
+          program = "${apkApp}/bin/whatseat-apk";
+          meta.description = "Signed release APK, copied to ${apkDir}";
+        };
+        release = {
+          type = "app";
+          program = "${releaseApp}/bin/whatseat-release";
+          meta.description = "GitHub release of the pubspec version with its APK";
+        };
       };
     };
 }

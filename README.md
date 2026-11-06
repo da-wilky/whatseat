@@ -30,9 +30,13 @@ base64 -w0 whatseat.p12
 shred -u whatseat.p12
 ```
 
-Then `./build-apk.sh` builds (arm64 only), signs and copies to `/mnt/pibackups/whatseat-<version>.apk`.
+Then `nix run path:.#apk` (from the checkout) builds (arm64 only), signs and copies to `/mnt/pibackups/whatseat-<version>.apk`.
 The keystore is unpacked to `build/tmp/` only while Gradle runs. A plain
 `flutter build apk --release` yields an **unsigned** APK – on purpose.
+
+To publish: bump `version` in `pubspec.yaml`, commit, tag `v<version>` with the release notes as an annotated
+message, `git push --follow-tags`, build the APK, then `nix run path:.#release` creates the GitHub release from the
+tag message with the APK attached (needs a one-time `nix run nixpkgs#gh -- auth login`).
 
 Debug builds install as `de.whatseat.whatseat.debug` ("WhatsEat Debug") next to the release app.
 
