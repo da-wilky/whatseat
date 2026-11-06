@@ -77,7 +77,40 @@
   "binge": "Essanfall",
   "bingeHint": "Kontrollverlust beim Essen",
   "measures": "Gewichtsregulierende Maßnahmen",
-  "measureDefaults": "Sport|Erbrechen|Abführmittel",
+  "measureDefaults": "Erbrechen|Abführmittel",
+  "sport": "Sport",
+  "measure": "Maßnahme",
+  "sportPick": "Sportart",
+  "newSport": "Neue Sportart …",
+  "duration": "Dauer",
+  "needOneMeasure": "Bitte mindestens eine Maßnahme oder Sportart eintragen.",
+  "statsSportTotals": "Sport gesamt",
+  "lists": "Auswahllisten",
+  "listsHint": "Einheiten, Maßnahmen, Mit wem, Sportarten",
+  "listFoodUnits": "Einheiten Essen",
+  "listDrinkUnits": "Einheiten Getränke",
+  "listMeasures": "Maßnahmen",
+  "listSports": "Sportarten",
+  "listEmpty": "Noch nichts in dieser Liste.",
+  "listAdd": "Hinzufügen",
+  "listValueExists": "Gibt es schon",
+  "listValueDeleted": "„{name}“ gelöscht",
+  "@listValueDeleted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listUsage": "{count, plural, =0{nicht verwendet} =1{in 1 Eintrag} other{in {count} Einträgen}}",
+  "@listUsage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "unitPlural": "Mehrzahl (optional)",
   "general": "Allgemein",
   "patientName": "Name",
   "patientNameHint": "Erscheint im PDF-Protokoll",
@@ -109,6 +142,7 @@
   "pinLengthHint": "4–6 Ziffern, dann ✓",
   "pinMismatch": "PINs stimmen nicht überein – bitte erneut",
   "data": "Daten",
+  "backup": "Backup",
   "backupCreate": "Backup erstellen",
   "backupWarning": "Am besten mit Passwort verschlüsselt",
   "backupRestore": "Backup wiederherstellen",

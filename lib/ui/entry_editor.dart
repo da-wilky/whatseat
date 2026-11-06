@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/cupertino.dart' show CupertinoTimerPicker, CupertinoTimerPickerMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,6 +33,7 @@ class EntryDraft {
     this.satiety,
     this.binge = false,
     this.measures = '',
+    this.sports = const [],
     this.situationAfter = '',
     this.templateId,
     this.running = false,
@@ -72,6 +74,7 @@ class EntryDraft {
       satiety: e.satiety,
       binge: e.binge,
       measures: e.measures,
+      sports: e.sports,
       situationAfter: e.situationAfter,
       templateId: e.templateId,
     );
@@ -91,6 +94,7 @@ class EntryDraft {
         satiety: e.satiety,
         binge: e.binge,
         measures: e.measures,
+        sports: e.sports,
         situationAfter: e.situationAfter,
         templateId: e.templateId,
         running: e.running,
@@ -110,6 +114,7 @@ class EntryDraft {
   int? satiety;
   bool binge;
   String measures;
+  List<SportSession> sports;
   String situationAfter;
   String? templateId;
   bool running;
@@ -131,6 +136,7 @@ class EntryDraft {
       satiety: Value(satiety),
       binge: Value(binge),
       measures: Value(measures),
+      sports: Value(sports),
       situationAfter: Value(situationAfter),
       templateId: Value(templateId),
       running: Value(running),
@@ -184,12 +190,14 @@ class _ItemRow {
       : drink = item.drink,
         quantity = TextEditingController(text: quantityText),
         unit = TextEditingController(text: item.unit),
+        unitPlural = item.unitPlural,
         food = TextEditingController(text: item.food),
         parts = [for (final p in item.parts) _PartRow(p.food)];
 
   final bool drink;
   final TextEditingController quantity;
   final TextEditingController unit;
+  String unitPlural;
   final TextEditingController food;
   final foodFocus = FocusNode();
   final List<_PartRow> parts;
@@ -208,6 +216,18 @@ class _ItemRow {
   }
 }
 
+class _SportRow {
+  _SportRow(SportSession s)
+      : sport = s.sport,
+        minutes = s.minutes;
+
+  String sport;
+  int? minutes;
+
+  /// Rows without a picked duration take over the last duration of a picked sport.
+  bool touched = false;
+}
+
 class EntryEditor extends ConsumerStatefulWidget {
   const EntryEditor({super.key, required this.draft, this.mode = EditorMode.edit});
 
@@ -224,25 +244,30 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
   late final List<_ItemRow> _foodRows = [
     for (final item in _d.items)
       if (!item.drink) _row(item),
-    if (!_isDrink && !_d.items.any((i) => !i.drink)) _newRow(drink: false),
+    if (!_isDrink && !_isSport && !_d.items.any((i) => !i.drink)) _newRow(drink: false),
   ];
   late final List<_ItemRow> _drinkRows = [
     for (final item in _d.items)
       if (item.drink) _row(item),
     if (_isDrink && _d.items.isEmpty) _newRow(drink: true),
   ];
+  late final List<_SportRow> _sportRows = [
+    for (final s in _d.sports) _SportRow(s)..touched = true,
+    if (_isSport && _d.sports.isEmpty) _SportRow(const SportSession(sport: '')),
+  ];
   late final _appetiteFor = TextEditingController(text: _d.appetiteFor);
   late final _before = TextEditingController(text: _d.situationBefore);
   late final _after = TextEditingController(text: _d.situationAfter);
   List<FoodSuggestion> _foods = const [];
   Map<String, List<String>> _partHistory = const {};
-  List<String> _whoHistory = const [];
-  List<String> _measureHistory = const [];
-  List<String> _unitHistory = const [];
-  List<String> _drinkUnitHistory = const [];
+  Map<String, int> _sportMinutes = const {};
   bool _dirty = false;
 
   bool get _isDrink => _d.meal == MealType.drink;
+
+  bool get _isSport => _d.meal == MealType.sport;
+
+  List<ListValue> _list(ListKind kind) => ref.read(listsProvider).value?[kind] ?? const [];
 
   bool get _staysRunning => widget.mode == EditorMode.start || (widget.mode == EditorMode.edit && _d.running);
 
@@ -256,18 +281,12 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
     final db = ref.read(databaseProvider);
     final foods = await db.foodSuggestions();
     final parts = await db.partHistory();
-    final who = await db.tagHistory((e) => e.withWhom);
-    final measures = await db.tagHistory((e) => e.measures);
-    final units = await db.unitHistory(drink: false);
-    final drinkUnits = await db.unitHistory(drink: true);
+    final sportMinutes = await db.lastSportMinutes();
     if (!mounted) return;
     setState(() {
       _foods = foods;
       _partHistory = parts;
-      _whoHistory = who;
-      _measureHistory = measures;
-      _unitHistory = units;
-      _drinkUnitHistory = drinkUnits;
+      _sportMinutes = sportMinutes;
     });
   }
 
@@ -285,10 +304,10 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
   _ItemRow _row(FoodItem item) => _ItemRow(item, _formatQuantity(item.quantity), touched: true);
 
   _ItemRow _newRow({required bool drink}) {
-    final l = AppLocalizations.of(context);
     final quantity = drink ? 200.0 : 1.0;
+    final unit = _list(drink ? ListKind.drinkUnit : ListKind.foodUnit).firstOrNull;
     return _ItemRow(
-      FoodItem(quantity: quantity, unit: (drink ? drinkUnits(l) : foodUnits(l)).first, food: '', drink: drink),
+      FoodItem(quantity: quantity, unit: unit?.name ?? '', unitPlural: unit?.plural ?? '', food: '', drink: drink),
       _formatQuantity(quantity),
       touched: false,
     );
@@ -307,14 +326,65 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
   }
 
   Future<void> _addUnit(_ItemRow row) async {
-    final l = AppLocalizations.of(context);
-    final unit = (await showTextDialog(context, title: l.newUnit, label: l.unit))?.trim() ?? '';
-    if (unit.isEmpty) return;
-    await ref.read(settingsProvider.notifier).addUnit(unit);
+    final unit = await showUnitDialog(context, title: AppLocalizations.of(context).newUnit);
+    if (unit == null) return;
+    final (name, plural) = unit;
+    await ref.read(databaseProvider).addListValue(row.drink ? ListKind.drinkUnit : ListKind.foodUnit, name, plural: plural);
     _change(() {
-      row.unit.text = unit;
+      row.unit.text = name;
+      row.unitPlural = plural;
       row.touched = true;
     });
+  }
+
+  void _addSportRow() => setState(() => _sportRows.add(_SportRow(const SportSession(sport: ''))));
+
+  void _pickSport(_SportRow row, String sport) => _change(() {
+        row.sport = sport;
+        if (!row.touched) row.minutes = _sportMinutes[sport.toLowerCase()];
+      });
+
+  Future<void> _pickDuration(_SportRow row) async {
+    final l = AppLocalizations.of(context);
+    // The picker asserts a start value on its 5-minute grid and below 24 hours.
+    var picked = (((row.minutes ?? 60) / 5).round() * 5).clamp(0, 24 * 60 - 5);
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          SizedBox(
+            height: 216,
+            child: CupertinoTimerPicker(
+              mode: CupertinoTimerPickerMode.hm,
+              minuteInterval: 5,
+              initialTimerDuration: Duration(minutes: picked),
+              onTimerDurationChanged: (d) => picked = d.inMinutes,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: FilledButton(
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l.ok),
+            ),
+          ),
+        ]),
+      ),
+    );
+    if (ok != true) return;
+    _change(() {
+      row.minutes = picked;
+      row.touched = true;
+    });
+  }
+
+  Future<void> _addSport(_SportRow row) async {
+    final l = AppLocalizations.of(context);
+    final name = (await showTextDialog(context, title: l.newSport, label: l.sportPick))?.trim() ?? '';
+    if (name.isEmpty) return;
+    await ref.read(databaseProvider).addListValue(ListKind.sport, name);
+    _pickSport(row, name);
   }
 
   void _removeRow(_ItemRow row) {
@@ -354,6 +424,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
             FoodItem(
               quantity: parseQuantity(r.quantity.text),
               unit: r.unit.text.trim(),
+              unitPlural: r.unit.text.trim().isEmpty ? '' : r.unitPlural,
               food: r.food.text.trim(),
               drink: r.drink,
               parts: [
@@ -365,6 +436,10 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
 
   void _applyTexts() {
     _d.items = _collectItems();
+    _d.sports = [
+      for (final r in _sportRows)
+        if (r.sport.isNotEmpty) SportSession(sport: r.sport, minutes: r.minutes),
+    ];
     _d.appetiteFor = _appetiteFor.text.trim();
     _d.situationBefore = _before.text.trim();
     _d.situationAfter = _after.text.trim();
@@ -374,7 +449,11 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
     final l = AppLocalizations.of(context);
     _applyTexts();
     _d.running = _staysRunning;
-    if (_d.items.isEmpty && !_d.running) {
+    if (_isSport && _d.sports.isEmpty && _d.measures.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.needOneMeasure)));
+      return;
+    }
+    if (!_isSport && _d.items.isEmpty && !_d.running) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.needOneItem)));
       (_isDrink ? _drinkRows : _foodRows).first.foodFocus.requestFocus();
       return;
@@ -437,12 +516,12 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
   }
 
   Widget _itemRow(AppLocalizations l, int index, _ItemRow row) {
-    final units = {
-      ...(row.drink ? drinkUnits(l) : foodUnits(l)),
-      ...ref.watch(settingsProvider.select((s) => s.customUnits)),
-      ...(row.drink ? _drinkUnitHistory : _unitHistory),
-      if (row.unit.text.isNotEmpty) row.unit.text,
+    // The row's own unit stays pickable even after it was removed from the list.
+    final plurals = {
+      for (final v in _list(row.drink ? ListKind.drinkUnit : ListKind.foodUnit)) v.name: v.plural,
+      if (row.unit.text.isNotEmpty) row.unit.text: row.unitPlural,
     };
+    final quantity = parseQuantity(row.quantity.text);
     final foods = _foods.where((f) => f.last.drink == row.drink);
     final rows = row.drink ? _drinkRows : _foodRows;
     // The entry's own kind needs one row left; the other section can be emptied.
@@ -456,23 +535,24 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
           onTap: () => row.quantity.selection = TextSelection(baseOffset: 0, extentOffset: row.quantity.text.length),
-          onChanged: (_) {
-            row.touched = true;
-            _markDirty();
-          },
+          // Rebuilds too, so the unit follows the amount into singular or plural.
+          onChanged: (_) => _change(() => row.touched = true),
           decoration: InputDecoration(hintText: l.quantityHint, contentPadding: const EdgeInsets.symmetric(vertical: 12)),
         ),
       ),
       const SizedBox(width: 6),
       SizedBox(
         width: 100,
-        child: _UnitPicker(
-          unit: row.unit.text,
-          units: units.toList(),
-          newUnitLabel: l.newUnit,
-          noUnitLabel: l.noUnit,
+        child: _ValuePicker(
+          value: row.unit.text,
+          values: plurals.keys.toList(),
+          label: (unit) => unitForm(l, unit, plurals[unit]!, quantity),
+          placeholder: '–',
+          emptyLabel: l.noUnit,
+          newLabel: l.newUnit,
           onSelected: (unit) => _change(() {
             row.unit.text = unit;
+            row.unitPlural = plurals[unit] ?? '';
             row.touched = true;
           }),
           onAdd: () => _addUnit(row),
@@ -502,6 +582,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
             _change(() {
               row.quantity.text = _formatQuantity(f.last.quantity);
               row.unit.text = f.last.unit;
+              row.unitPlural = f.last.unitPlural;
             });
           },
           onChanged: _markDirty,
@@ -583,18 +664,51 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
         ],
       );
 
+  Widget _sportRow(AppLocalizations l, _SportRow row) {
+    final minutes = row.minutes;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(children: [
+        Expanded(
+          child: _ValuePicker(
+            value: row.sport,
+            values: {for (final v in _list(ListKind.sport)) v.name, if (row.sport.isNotEmpty) row.sport}.toList(),
+            label: (sport) => sport,
+            placeholder: l.sportPick,
+            newLabel: l.newSport,
+            onSelected: (sport) => _pickSport(row, sport),
+            onAdd: () => _addSport(row),
+          ),
+        ),
+        const SizedBox(width: 6),
+        ActionChip(
+          avatar: const Icon(Icons.timer_outlined, size: 18),
+          label: Text(minutes == null ? l.duration : formatDuration(minutes)),
+          onPressed: () => _pickDuration(row),
+        ),
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.close_rounded),
+          onPressed: () => _change(() => _sportRows.remove(row)),
+        ),
+      ]),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    ref.watch(listsProvider);
+    final db = ref.read(databaseProvider);
+    List<String> names(ListKind kind) => [for (final v in _list(kind)) v.name];
     const gap = SizedBox(height: 12);
     final saveLabel = widget.mode == EditorMode.start ? l.startEatingSave : l.save;
 
     final meal = SectionCard(title: l.sectionMeal, icon: Icons.schedule_rounded, children: [
       Wrap(spacing: 8, runSpacing: 8, children: [
         for (final m in MealType.values)
-          if (m != MealType.drink)
+          if (m != MealType.drink && m != MealType.sport)
             ChoiceChip(
               avatar: Icon(mealIcon(m), size: 18),
               label: Text(mealLabel(l, m)),
@@ -657,8 +771,9 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
     final who = SectionCard(title: l.withWhom, icon: Icons.people_outline_rounded, children: [
       TagPicker(
         value: _d.withWhom,
-        suggestions: {..._whoHistory, ...l.withWhomDefaults.split('|')}.toList(),
+        suggestions: names(ListKind.withWhom),
         onChanged: (v) => _change(() => _d.withWhom = v),
+        onCreated: (tag) => db.addListValue(ListKind.withWhom, tag),
       ),
     ]);
     final before = SectionCard(title: l.sectionBefore, icon: Icons.flatware_rounded, children: [
@@ -689,6 +804,23 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
         decoration: InputDecoration(labelText: l.situationAfter, alignLabelWithHint: true),
       ),
     ]);
+    final measures = [
+      TagPicker(
+        value: _d.measures,
+        suggestions: names(ListKind.measure),
+        onChanged: (v) => _change(() => _d.measures = v),
+        onCreated: (tag) => db.addListValue(ListKind.measure, tag),
+      ),
+      for (final row in _sportRows) KeyedSubtree(key: ObjectKey(row), child: _sportRow(l, row)),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: _addSportRow,
+          icon: const Icon(Icons.directions_run_rounded),
+          label: Text(l.sport),
+        ),
+      ),
+    ];
     final behaviour = SectionCard(title: l.sectionBehaviour, icon: Icons.flag_outlined, children: [
       SwitchListTile(
         contentPadding: EdgeInsets.zero,
@@ -700,14 +832,17 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
       gap,
       Text(l.measures, style: theme.textTheme.bodyMedium),
       const SizedBox(height: 8),
-      TagPicker(
-        value: _d.measures,
-        suggestions: {..._measureHistory, ...l.measureDefaults.split('|')}.toList(),
-        onChanged: (v) => _change(() => _d.measures = v),
-      ),
+      ...measures,
     ]);
+    final sport = SectionCard(
+      title: l.measures,
+      icon: isMeasureEntry(_d.meal, _d.measures) ? measureIcon : Icons.directions_run_rounded,
+      children: measures,
+    );
     final sections = _isDrink
         ? [time, drinks]
+        : _isSport
+        ? [time, sport]
         : switch (widget.mode) {
             EditorMode.start => [meal, who, before],
             EditorMode.finish => [food, drinks, after, behaviour, meal, who, before],
@@ -744,14 +879,21 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
           title: Text(switch (widget.mode) {
             EditorMode.start => l.startEating,
             EditorMode.finish => l.finishEating,
-            EditorMode.edit => _d.id != null ? l.editEntry : (_isDrink ? l.drink : l.newEntry),
+            EditorMode.edit => _d.id != null
+                ? l.editEntry
+                : _isDrink
+                ? l.drink
+                : _isSport
+                ? (isMeasureEntry(_d.meal, _d.measures) ? l.measure : l.sport)
+                : l.newEntry,
           }),
           actions: [
             TextButton(onPressed: _save, child: Text(saveLabel)),
             PopupMenuButton<VoidCallback>(
               onSelected: (action) => action(),
               itemBuilder: (_) => [
-                if (widget.mode != EditorMode.start) PopupMenuItem(value: _saveAsTemplate, child: Text(l.saveAsTemplate)),
+                if (widget.mode != EditorMode.start && !_isSport)
+                  PopupMenuItem(value: _saveAsTemplate, child: Text(l.saveAsTemplate)),
                 if (_d.id != null) PopupMenuItem(value: _delete, child: Text(l.delete)),
               ],
             ),
@@ -788,6 +930,78 @@ Future<String?> showTextDialog(BuildContext context,
       builder: (_) =>
           _TextDialog(title: title, initial: initial, label: label, initialError: error, validate: validate),
     );
+
+/// Name and plural of a unit; [taken] holds lower-cased names that would be duplicates.
+Future<(String, String)?> showUnitDialog(BuildContext context,
+        {required String title, String name = '', String plural = '', Set<String> taken = const {}}) =>
+    showDialog<(String, String)>(
+      context: context,
+      builder: (_) => _UnitDialog(title: title, name: name, plural: plural, taken: taken),
+    );
+
+class _UnitDialog extends StatefulWidget {
+  const _UnitDialog({required this.title, required this.name, required this.plural, required this.taken});
+
+  final String title;
+  final String name;
+  final String plural;
+  final Set<String> taken;
+
+  @override
+  State<_UnitDialog> createState() => _UnitDialogState();
+}
+
+class _UnitDialogState extends State<_UnitDialog> {
+  late final _name = TextEditingController(text: widget.name);
+  late final _plural = TextEditingController(text: widget.plural);
+  String? _error;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _plural.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _name.text.trim();
+    if (name.isEmpty) return;
+    if (widget.taken.contains(name.toLowerCase())) {
+      setState(() => _error = AppLocalizations.of(context).listValueExists);
+      return;
+    }
+    Navigator.pop(context, (name, _plural.text.trim()));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(
+          controller: _name,
+          autofocus: true,
+          textInputAction: TextInputAction.next,
+          decoration: InputDecoration(labelText: l.unit, errorText: _error),
+          onChanged: (_) {
+            if (_error != null) setState(() => _error = null);
+          },
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _plural,
+          decoration: InputDecoration(labelText: l.unitPlural),
+          onSubmitted: (_) => _submit(),
+        ),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(l.cancel)),
+        FilledButton(onPressed: _submit, child: Text(l.ok)),
+      ],
+    );
+  }
+}
 
 /// Owns its controller so it is disposed only after the closing animation, not when the future completes.
 class _TextDialog extends StatefulWidget {
@@ -980,11 +1194,20 @@ class PercentSlider extends StatelessWidget {
 }
 
 class TagPicker extends StatelessWidget {
-  const TagPicker({super.key, required this.value, required this.suggestions, required this.onChanged});
+  const TagPicker({
+    super.key,
+    required this.value,
+    required this.suggestions,
+    required this.onChanged,
+    required this.onCreated,
+  });
 
   final String value;
   final List<String> suggestions;
   final ValueChanged<String> onChanged;
+
+  /// A tag typed in by hand, to be added to the list.
+  final ValueChanged<String> onCreated;
 
   @override
   Widget build(BuildContext context) {
@@ -1006,9 +1229,10 @@ class TagPicker extends StatelessWidget {
           label: Text(l.other),
           onPressed: () async {
             final tag = await showTextDialog(context, title: l.other);
-            // Commas would split the value into several tags on reload.
-            final clean = tag?.replaceAll(',', ' ').trim() ?? '';
-            if (clean.isNotEmpty && !selected.contains(clean)) onChanged(joinTags([...selected, clean]));
+            final clean = cleanTag(tag ?? '');
+            if (clean.isEmpty) return;
+            onCreated(clean);
+            if (!selected.contains(clean)) onChanged(joinTags([...selected, clean]));
           },
         ),
       ],
@@ -1016,43 +1240,47 @@ class TagPicker extends StatelessWidget {
   }
 }
 
-class _UnitPicker extends StatelessWidget {
-  const _UnitPicker({
-    required this.unit,
-    required this.units,
-    required this.newUnitLabel,
-    required this.noUnitLabel,
+/// Commas would split the value into several tags on reload.
+String cleanTag(String tag) => tag.replaceAll(',', ' ').trim();
+
+class _ValuePicker extends StatelessWidget {
+  const _ValuePicker({
+    required this.value,
+    required this.values,
+    required this.label,
+    required this.placeholder,
+    required this.newLabel,
     required this.onSelected,
     required this.onAdd,
+    this.emptyLabel,
   });
 
   static const _addSentinel = '\u0000add';
 
-  final String unit;
-  final List<String> units;
-  final String newUnitLabel;
-  final String noUnitLabel;
+  final String value;
+  final List<String> values;
+  final String Function(String value) label;
+  final String placeholder;
+  final String newLabel;
   final ValueChanged<String> onSelected;
   final VoidCallback onAdd;
+
+  /// Offers picking no value, under this name.
+  final String? emptyLabel;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final muted = TextStyle(color: theme.colorScheme.onSurfaceVariant);
     return PopupMenuButton<String>(
       tooltip: '',
-      initialValue: unit,
+      initialValue: value,
       position: PopupMenuPosition.under,
       constraints: const BoxConstraints(maxHeight: 360, minWidth: 160),
       onSelected: (v) => v == _addSentinel ? onAdd() : onSelected(v),
       itemBuilder: (_) => [
-        for (final u in units)
-          PopupMenuItem(
-            value: u,
-            height: 40,
-            child: u.isEmpty
-                ? Text(noUnitLabel, style: TextStyle(color: theme.colorScheme.onSurfaceVariant))
-                : Text(u),
-          ),
+        for (final v in values) PopupMenuItem(value: v, height: 40, child: Text(label(v))),
+        if (emptyLabel case final empty?) PopupMenuItem(value: '', height: 40, child: Text(empty, style: muted)),
         const PopupMenuDivider(),
         PopupMenuItem(
           value: _addSentinel,
@@ -1060,7 +1288,7 @@ class _UnitPicker extends StatelessWidget {
           child: Row(children: [
             Icon(Icons.add_rounded, size: 18, color: theme.colorScheme.primary),
             const SizedBox(width: 8),
-            Text(newUnitLabel, style: TextStyle(color: theme.colorScheme.primary)),
+            Text(newLabel, style: TextStyle(color: theme.colorScheme.primary)),
           ]),
         ),
       ],
@@ -1070,7 +1298,12 @@ class _UnitPicker extends StatelessWidget {
           suffixIcon: Icon(Icons.arrow_drop_down_rounded),
           suffixIconConstraints: BoxConstraints(minWidth: 28),
         ),
-        child: Text(unit.isEmpty ? '–' : unit, maxLines: 1, overflow: TextOverflow.ellipsis),
+        child: Text(
+          value.isEmpty ? placeholder : label(value),
+          style: value.isEmpty && emptyLabel == null ? muted : null,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
   }

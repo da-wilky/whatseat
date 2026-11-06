@@ -10,8 +10,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
 import 'data/auto_backup.dart';
 import 'data/database.dart';
+import 'l10n/app_localizations.dart';
 import 'providers.dart';
 import 'recovery_screen.dart';
+import 'ui/common.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,9 +67,16 @@ Future<void> _start(SharedPreferencesWithCache prefs,
   final bool fresh;
   try {
     fresh = !await (await databaseFiles()).first.exists();
-    db = AppDatabase(await loadOrCreateDbKey());
+    final localeCode = prefs.getString('locale') ?? '';
+    final l = lookupAppLocalizations(localeCode.isEmpty
+        ? basicLocaleListResolution(WidgetsBinding.instance.platformDispatcher.locales, AppLocalizations.supportedLocales)
+        : Locale(localeCode));
+    db = AppDatabase(await loadOrCreateDbKey(),
+        listDefaults: listDefaults(l, prefs.getStringList('customUnits') ?? const []));
     // Opening is lazy; a wrong or lost key only surfaces on the first query.
     await db.customSelect('SELECT count(*) FROM sqlite_master').get();
+    // Moved into the unit lists by the migration above.
+    await prefs.remove('customUnits');
   } on Object catch (error) {
     await db?.close();
     runApp(RecoveryApp(

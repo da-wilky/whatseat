@@ -226,7 +226,75 @@ class AppLocalizationsEn extends AppLocalizations {
   String get measures => 'Weight-control measures';
 
   @override
-  String get measureDefaults => 'exercise|vomiting|laxatives';
+  String get measureDefaults => 'vomiting|laxatives';
+
+  @override
+  String get sport => 'Sport';
+
+  @override
+  String get measure => 'Measure';
+
+  @override
+  String get sportPick => 'Sport';
+
+  @override
+  String get newSport => 'New sport …';
+
+  @override
+  String get duration => 'Duration';
+
+  @override
+  String get needOneMeasure => 'Please add at least one measure or sport.';
+
+  @override
+  String get statsSportTotals => 'Sport in total';
+
+  @override
+  String get lists => 'Selection lists';
+
+  @override
+  String get listsHint => 'Units, measures, with whom, sports';
+
+  @override
+  String get listFoodUnits => 'Food units';
+
+  @override
+  String get listDrinkUnits => 'Drink units';
+
+  @override
+  String get listMeasures => 'Measures';
+
+  @override
+  String get listSports => 'Sports';
+
+  @override
+  String get listEmpty => 'Nothing in this list yet.';
+
+  @override
+  String get listAdd => 'Add';
+
+  @override
+  String get listValueExists => 'Already exists';
+
+  @override
+  String listValueDeleted(String name) {
+    return '“$name” deleted';
+  }
+
+  @override
+  String listUsage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'in $count entries',
+      one: 'in 1 entry',
+      zero: 'not used',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get unitPlural => 'Plural (optional)';
 
   @override
   String get general => 'General';
@@ -307,6 +375,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get data => 'Data';
+
+  @override
+  String get backup => 'Backup';
 
   @override
   String get backupCreate => 'Create backup';

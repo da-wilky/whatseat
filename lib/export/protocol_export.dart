@@ -153,14 +153,14 @@ Future<Uint8List> buildProtocolPdf(AppLocalizations l, List<ProtocolDay> days, S
             ),
             for (final e in day.entries)
               pw.TableRow(children: [
-                cell('${mealLabel(l, e.meal)}\n${timeRange(e.startMinutes, e.endMinutes)}'),
+                cell('${entryLabel(l, e)}\n${timeRange(e.startMinutes, e.endMinutes)}'),
                 cell(e.withWhom),
                 cell(_situationBefore(l, e)),
                 cell(_percent(e.hunger)),
                 ...itemCells(context, e),
                 cell(_percent(e.satiety)),
                 cell(e.binge ? l.yes : l.no),
-                cell(e.measures),
+                cell(measuresText(e)),
                 cell(e.situationAfter),
               ]),
             for (var i = day.entries.length; i < 8; i++)
@@ -204,7 +204,7 @@ String buildProtocolCsv(AppLocalizations l, List<ProtocolDay> days) {
         for (final e in day.entries)
         [
           e.day,
-          mealLabel(l, e.meal),
+          entryLabel(l, e),
           formatMinutes(e.startMinutes),
           e.endMinutes == null ? '' : formatMinutes(e.endMinutes!),
           e.withWhom,
@@ -215,7 +215,7 @@ String buildProtocolCsv(AppLocalizations l, List<ProtocolDay> days) {
           e.items.map(itemLabel).join('; '),
           e.satiety ?? '',
           e.binge ? l.yes : l.no,
-          e.measures,
+          measuresText(e),
           e.situationAfter,
           _noteText(l, day.note),
         ],

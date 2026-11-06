@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,19 +8,6 @@ import 'package:whatseat/data/models.dart';
 import 'package:whatseat/l10n/app_localizations.dart';
 import 'package:whatseat/providers.dart';
 import 'package:whatseat/ui/entry_editor.dart';
-
-class _Settings extends SettingsNotifier {
-  @override
-  AppSettings build() => const AppSettings(
-        localeCode: 'de',
-        patientName: '',
-        lockEnabled: false,
-        biometricEnabled: false,
-        lockTimeoutSeconds: 60,
-        pinLength: 4,
-        customUnits: [],
-      );
-}
 
 MealEntriesCompanion _entry(String day, List<FoodItem> items) => MealEntriesCompanion.insert(
       id: newId(),
@@ -39,9 +26,14 @@ void main() {
   setUp(() => db = AppDatabase.forTesting(NativeDatabase.memory()));
   tearDown(() => db.close());
 
-  Future<void> openEditor(WidgetTester tester, EntryDraft draft) async {
+  // Fixed lists rather than drift's stream: cancelling that on unmount leaves a timer the test binding rejects.
+  Future<void> openEditor(WidgetTester tester, EntryDraft draft, {List<ListValue> lists = const []}) async {
     await tester.pumpWidget(ProviderScope(
-      overrides: [databaseProvider.overrideWithValue(db), settingsProvider.overrideWith(_Settings.new)],
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        listsProvider.overrideWithValue(
+            AsyncData({for (final kind in ListKind.values) kind: lists.where((v) => v.kind == kind).toList()})),
+      ],
       child: MaterialApp(
         locale: const Locale('de'),
         supportedLocales: AppLocalizations.supportedLocales,
@@ -63,6 +55,34 @@ void main() {
 
   Future<List<MealEntry>> saved(WidgetTester tester) async =>
       (await tester.runAsync(() => db.entriesBetween('2026-11-05', '2026-11-05')))!;
+
+  testWidgets('a picked sport takes over its last duration and the entry needs a sport or measure', (tester) async {
+    await tester.runAsync(() => db.saveEntry(_entry('2026-11-04', const [])
+        .copyWith(meal: const Value(MealType.sport), sports: const Value([SportSession(sport: 'Volleyball', minutes: 90)]))));
+    await openEditor(
+      tester,
+      EntryDraft(day: '2026-11-05', meal: MealType.sport, start: 18 * 60, items: const []),
+      lists: [ListValue(id: 'v', kind: ListKind.sport, name: 'Volleyball', plural: '', position: 0, updatedAt: DateTime(2026))],
+    );
+
+    await tester.tap(find.text('Speichern').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Bitte mindestens eine Maßnahme oder Sportart eintragen.'), findsOneWidget);
+    expect(await saved(tester), isEmpty);
+
+    await tester.tap(find.text('Sportart'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Volleyball').last);
+    await tester.pumpAndSettle();
+    expect(find.text('1:30 h'), findsOneWidget);
+
+    await tester.tap(find.text('Speichern').last);
+    await tester.pumpAndSettle();
+    final entry = (await saved(tester)).single;
+    expect(entry.meal, MealType.sport);
+    expect(entry.sports.single.sport, 'Volleyball');
+    expect(entry.sports.single.minutes, 90);
+  });
 
   testWidgets('picking a food prefills its last parts and suggests only its own parts', (tester) async {
     await tester.runAsync(() async {

@@ -228,7 +228,76 @@ class AppLocalizationsDe extends AppLocalizations {
   String get measures => 'Gewichtsregulierende Maßnahmen';
 
   @override
-  String get measureDefaults => 'Sport|Erbrechen|Abführmittel';
+  String get measureDefaults => 'Erbrechen|Abführmittel';
+
+  @override
+  String get sport => 'Sport';
+
+  @override
+  String get measure => 'Maßnahme';
+
+  @override
+  String get sportPick => 'Sportart';
+
+  @override
+  String get newSport => 'Neue Sportart …';
+
+  @override
+  String get duration => 'Dauer';
+
+  @override
+  String get needOneMeasure =>
+      'Bitte mindestens eine Maßnahme oder Sportart eintragen.';
+
+  @override
+  String get statsSportTotals => 'Sport gesamt';
+
+  @override
+  String get lists => 'Auswahllisten';
+
+  @override
+  String get listsHint => 'Einheiten, Maßnahmen, Mit wem, Sportarten';
+
+  @override
+  String get listFoodUnits => 'Einheiten Essen';
+
+  @override
+  String get listDrinkUnits => 'Einheiten Getränke';
+
+  @override
+  String get listMeasures => 'Maßnahmen';
+
+  @override
+  String get listSports => 'Sportarten';
+
+  @override
+  String get listEmpty => 'Noch nichts in dieser Liste.';
+
+  @override
+  String get listAdd => 'Hinzufügen';
+
+  @override
+  String get listValueExists => 'Gibt es schon';
+
+  @override
+  String listValueDeleted(String name) {
+    return '„$name“ gelöscht';
+  }
+
+  @override
+  String listUsage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'in $count Einträgen',
+      one: 'in 1 Eintrag',
+      zero: 'nicht verwendet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get unitPlural => 'Mehrzahl (optional)';
 
   @override
   String get general => 'Allgemein';
@@ -310,6 +379,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get data => 'Daten';
+
+  @override
+  String get backup => 'Backup';
 
   @override
   String get backupCreate => 'Backup erstellen';

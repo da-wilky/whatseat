@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../data/database.dart';
 import '../data/models.dart';
 import '../l10n/app_localizations.dart';
 
@@ -10,6 +11,7 @@ String mealLabel(AppLocalizations l, MealType meal) => switch (meal) {
       MealType.dinner => l.mealDinner,
       MealType.snack => l.mealSnack,
       MealType.drink => l.drink,
+      MealType.sport => l.sport,
     };
 
 IconData mealIcon(MealType meal) => switch (meal) {
@@ -18,7 +20,17 @@ IconData mealIcon(MealType meal) => switch (meal) {
       MealType.dinner => Icons.dinner_dining_outlined,
       MealType.snack => Icons.cookie_outlined,
       MealType.drink => Icons.local_drink_outlined,
+      MealType.sport => Icons.directions_run_rounded,
     };
+
+/// A sport entry only counts as sport while it holds nothing but sports.
+bool isMeasureEntry(MealType meal, String measures) => meal == MealType.sport && measures.isNotEmpty;
+
+String entryLabel(AppLocalizations l, MealEntry e) => isMeasureEntry(e.meal, e.measures) ? l.measure : mealLabel(l, e.meal);
+
+const measureIcon = Icons.checklist_rounded;
+
+IconData entryIcon(MealEntry e) => isMeasureEntry(e.meal, e.measures) ? measureIcon : mealIcon(e.meal);
 
 /// (background, foreground) of a meal's marker.
 (Color, Color) mealColors(ColorScheme s, MealType meal) => switch (meal) {
@@ -27,23 +39,47 @@ IconData mealIcon(MealType meal) => switch (meal) {
       MealType.dinner => (s.secondary, s.onSecondary),
       MealType.snack => (s.secondaryContainer, s.onSecondaryContainer),
       MealType.drink => (s.tertiary, s.onTertiary),
+      MealType.sport => (s.primaryContainer, s.onPrimaryContainer),
     };
 
-List<String> foodUnits(AppLocalizations l) => l.foodUnits.split('|');
+/// The lists' starting values in the current language; custom units from before the lists go into both unit lists.
+ListDefaults listDefaults(AppLocalizations l, List<String> customUnits) {
+  List<(String, String)> units(String names) => [
+        for (final name in [...names.split('|'), ...customUnits])
+          if (name.isNotEmpty) (name, _builtInPlural(l, name) ?? ''),
+      ];
+  List<(String, String)> plain(String names) => [for (final name in names.split('|')) (name, '')];
+  return {
+    ListKind.foodUnit: units(l.foodUnits),
+    ListKind.drinkUnit: units(l.drinkUnits),
+    ListKind.measure: plain(l.measureDefaults),
+    ListKind.withWhom: plain(l.withWhomDefaults),
+  };
+}
 
-List<String> drinkUnits(AppLocalizations l) => l.drinkUnits.split('|');
+String? _builtInPlural(AppLocalizations l, String unit) =>
+    l.unitDefs.split('|').map((p) => p.split('/')).where((p) => p.first == unit).firstOrNull?.last;
+
+/// Items from before units carried their plural fall back to the built-in units.
+String unitForm(AppLocalizations l, String unit, String plural, double? quantity) {
+  if (quantity == null || quantity == 1) return unit;
+  if (plural.isNotEmpty) return plural;
+  return _builtInPlural(l, unit) ?? unit;
+}
 
 String formatAmount(AppLocalizations l, FoodItem item) {
   final q = item.quantity;
   final qText = q == null ? '' : NumberFormat('#.##', l.localeName).format(q);
-  var unit = item.unit;
-  if (q != null && q != 1) {
-    for (final pair in l.unitDefs.split('|').map((p) => p.split('/'))) {
-      if (pair.first == unit) unit = pair.last;
-    }
-  }
-  return [qText, unit].where((s) => s.isNotEmpty).join(' ');
+  return [qText, unitForm(l, item.unit, item.unitPlural, q)].where((s) => s.isNotEmpty).join(' ');
 }
+
+String formatDuration(int minutes) => '${minutes ~/ 60}:${(minutes % 60).toString().padLeft(2, '0')} h';
+
+String sportsSummary(List<SportSession> sports) =>
+    sports.map((s) => s.minutes == null ? s.sport : '${s.sport} ${formatDuration(s.minutes!)}').join(', ');
+
+/// Sports are measures too; the export and the incident markers treat them alike.
+String measuresText(MealEntry e) => [e.measures, sportsSummary(e.sports)].where((s) => s.isNotEmpty).join(', ');
 
 String itemLabel(FoodItem item) =>
     item.parts.isEmpty ? item.food : '${item.food} (${item.parts.map((p) => p.food).join(', ')})';

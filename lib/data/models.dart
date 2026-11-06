@@ -3,7 +3,10 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 // Stored by index: only append.
-enum MealType { breakfast, lunch, dinner, snack, drink }
+enum MealType { breakfast, lunch, dinner, snack, drink, sport }
+
+// Stored by index: only append.
+enum ListKind { foodUnit, drinkUnit, measure, withWhom, sport }
 
 MealType mealTypeForTime(int minutes) {
   final h = minutes ~/ 60;
@@ -14,12 +17,22 @@ MealType mealTypeForTime(int minutes) {
 }
 
 class FoodItem {
-  const FoodItem({this.quantity, this.unit = '', required this.food, this.drink = false, this.parts = const []});
+  const FoodItem({
+    this.quantity,
+    this.unit = '',
+    this.unitPlural = '',
+    required this.food,
+    this.drink = false,
+    this.parts = const [],
+  });
 
   final double? quantity;
 
   /// Stored in singular; pluralised for display.
   final String unit;
+
+  /// Copied from the unit list when entered, so later changes to the list leave this item as it was.
+  final String unitPlural;
   final String food;
   final bool drink;
 
@@ -29,6 +42,7 @@ class FoodItem {
   Map<String, dynamic> toJson() => {
         'quantity': quantity,
         'unit': unit,
+        if (unitPlural.isNotEmpty) 'unitPlural': unitPlural,
         'food': food,
         'drink': drink,
         if (parts.isNotEmpty) 'parts': [for (final p in parts) p.toJson()],
@@ -48,6 +62,7 @@ class FoodItem {
     return FoodItem(
       quantity: (json['quantity'] as num?)?.toDouble(),
       unit: json['unit'] as String? ?? '',
+      unitPlural: json['unitPlural'] as String? ?? '',
       food: json['food'] as String,
       drink: json['drink'] as bool? ?? false,
       parts: [
@@ -72,6 +87,31 @@ class FoodItemsConverter extends TypeConverter<List<FoodItem>, String>
 
   @override
   String toSql(List<FoodItem> value) => jsonEncode([for (final i in value) i.toJson()]);
+}
+
+class SportSession {
+  const SportSession({required this.sport, this.minutes});
+
+  final String sport;
+  final int? minutes;
+
+  Map<String, dynamic> toJson() => {'sport': sport, 'minutes': minutes};
+
+  factory SportSession.fromJson(Map<String, dynamic> json) =>
+      SportSession(sport: json['sport'] as String, minutes: json['minutes'] as int?);
+}
+
+class SportsConverter extends TypeConverter<List<SportSession>, String>
+    with JsonTypeConverter<List<SportSession>, String> {
+  const SportsConverter();
+
+  @override
+  List<SportSession> fromSql(String fromDb) => [
+        for (final e in jsonDecode(fromDb) as List) SportSession.fromJson(e as Map<String, dynamic>),
+      ];
+
+  @override
+  String toSql(List<SportSession> value) => jsonEncode([for (final s in value) s.toJson()]);
 }
 
 /// Values are stored as one comma-separated text column so the export matches the paper form.

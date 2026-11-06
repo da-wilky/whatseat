@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -25,6 +27,7 @@ class MealEntries extends Table {
   IntColumn get satiety => integer().nullable()();
   BoolColumn get binge => boolean().withDefault(const Constant(false))();
   TextColumn get measures => text().withDefault(const Constant(''))();
+  TextColumn get sports => text().map(const SportsConverter()).withDefault(const Constant('[]'))();
   TextColumn get situationAfter => text().withDefault(const Constant(''))();
   // Started with "start eating" and not finished yet; kept out of exports.
   BoolColumn get running => boolean().withDefault(const Constant(false))();
@@ -65,6 +68,25 @@ class MealTemplates extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// What the pickers offer; entries copy the value, so changes here never touch them.
+@DataClassName('ListValue')
+class ListValues extends Table {
+  TextColumn get id => text()();
+  IntColumn get kind => intEnum<ListKind>()();
+  TextColumn get name => text()();
+  TextColumn get plural => text().withDefault(const Constant(''))();
+  IntColumn get position => integer()();
+  DateTimeColumn get updatedAt => dateTime()();
+  // Never purged: restoring an older backup would otherwise bring a deleted value back.
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Per list, (name, plural) pairs.
+typedef ListDefaults = Map<ListKind, List<(String, String)>>;
+
 class FoodSuggestion {
   const FoodSuggestion(this.last, this.count);
 
@@ -74,9 +96,10 @@ class FoodSuggestion {
   String get food => last.food;
 }
 
-@DriftDatabase(tables: [MealEntries, DayNotes, MealTemplates])
+@DriftDatabase(tables: [MealEntries, DayNotes, MealTemplates, ListValues])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase(String key)
+  /// [listDefaults] fill the lists once, when they are created.
+  AppDatabase(String key, {this.listDefaults = const {}})
       : super(driftDatabase(
           name: 'whatseat',
           native: DriftNativeOptions(
@@ -85,17 +108,60 @@ class AppDatabase extends _$AppDatabase {
           ),
         ));
 
-  AppDatabase.forTesting(super.executor);
+  AppDatabase.forTesting(super.executor, {this.listDefaults = const {}});
+
+  final ListDefaults listDefaults;
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onUpgrade: (m, from, to) async {
           if (from < 2) await m.addColumn(mealEntries, mealEntries.running);
+          if (from < 3) {
+            await m.createTable(listValues);
+            await m.addColumn(mealEntries, mealEntries.sports);
+          }
+        },
+        beforeOpen: (details) async {
+          if ((details.versionBefore ?? 0) < 3) await _fillLists(listDefaults);
         },
       );
+
+  /// Adds [defaults] and every value the entries use, unless the list has or had a value of that name.
+  Future<void> _fillLists(ListDefaults defaults) => transaction(() async {
+        final candidates = {for (final kind in ListKind.values) kind: [...?defaults[kind]]};
+        for (final e in await _history()) {
+          for (final i in e.items.where((i) => i.unit.isNotEmpty)) {
+            candidates[i.drink ? ListKind.drinkUnit : ListKind.foodUnit]!.add((i.unit, i.unitPlural));
+          }
+          candidates[ListKind.measure]!.addAll(splitTags(e.measures).map((t) => (t, '')));
+          candidates[ListKind.withWhom]!.addAll(splitTags(e.withWhom).map((t) => (t, '')));
+          candidates[ListKind.sport]!.addAll(e.sports.map((s) => (s.sport, '')));
+        }
+        final existing = await select(listValues).get();
+        final taken = {for (final v in existing) (v.kind, v.name.toLowerCase())};
+        var position = existing.fold(0, (p, v) => max(p, v.position + 1));
+        for (final MapEntry(key: kind, value: values) in candidates.entries) {
+          for (final (name, plural) in values) {
+            if (!taken.add((kind, name.toLowerCase()))) continue;
+            await into(listValues).insert(
+              ListValuesCompanion.insert(
+                // The same on every device, so lists filled separately merge on restore instead of doubling.
+                id: '${kind.name}:${name.toLowerCase()}',
+                kind: kind,
+                name: name,
+                plural: Value(plural),
+                position: position++,
+                // Older than any edit, so an edited copy from a backup wins.
+                updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
+              ),
+              mode: InsertMode.insertOrIgnore,
+            );
+          }
+        }
+      });
 
   Stream<List<MealEntry>> watchDay(String day) => (select(mealEntries)
         ..where((e) => e.day.equals(day) & e.deletedAt.isNull())
@@ -207,24 +273,67 @@ class AppDatabase extends _$AppDatabase {
     };
   }
 
-  Future<List<String>> unitHistory({required bool drink}) async {
-    final counts = <String, int>{};
+  /// The latest duration per lower-cased sport, proposed when it is picked again.
+  Future<Map<String, int>> lastSportMinutes() async {
+    final result = <String, int>{};
     for (final e in await _history()) {
-      for (final unit in e.items.where((i) => i.drink == drink).map((i) => i.unit).where((u) => u.isNotEmpty)) {
-        counts[unit] = (counts[unit] ?? 0) + 1;
+      for (final s in e.sports) {
+        if (s.minutes != null) result.putIfAbsent(s.sport.toLowerCase(), () => s.minutes!);
       }
     }
-    return counts.keys.toList()..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+    return result;
   }
 
-  Future<List<String>> tagHistory(String Function(MealEntry) column) async {
+  Stream<List<ListValue>> watchLists() => (select(listValues)
+        ..where((v) => v.deletedAt.isNull())
+        ..orderBy([(v) => OrderingTerm.asc(v.position)]))
+      .watch();
+
+  /// A deleted value of the same name comes back instead of a duplicate.
+  Future<void> addListValue(ListKind kind, String name, {String plural = ''}) => transaction(() async {
+        // Compared in Dart: SQLite's lower() leaves umlauts alone.
+        final values = await (select(listValues)..where((v) => v.kind.equalsValue(kind))).get();
+        final same = values.where((v) => v.name.toLowerCase() == name.toLowerCase()).firstOrNull;
+        if (same != null) {
+          if (same.deletedAt != null) await updateListValue(same.id, name: name, plural: plural, deleted: false);
+          return;
+        }
+        await into(listValues).insert(ListValuesCompanion.insert(
+          id: newId(),
+          kind: kind,
+          name: name,
+          plural: Value(plural),
+          position: values.fold(0, (p, v) => max(p, v.position + 1)),
+          updatedAt: DateTime.now(),
+        ));
+      });
+
+  Future<void> updateListValue(String id, {String? name, String? plural, bool? deleted}) {
+    final now = DateTime.now();
+    return (update(listValues)..where((v) => v.id.equals(id))).write(ListValuesCompanion(
+      name: name == null ? const Value.absent() : Value(name),
+      plural: plural == null ? const Value.absent() : Value(plural),
+      deletedAt: deleted == null ? const Value.absent() : Value(deleted ? now : null),
+      updatedAt: Value(now),
+    ));
+  }
+
+  /// Number of entries using each value of [kind], by lower-cased name as the lists match names.
+  Future<Map<String, int>> listUsage(ListKind kind) async {
     final counts = <String, int>{};
-    for (final e in await _history()) {
-      for (final tag in splitTags(column(e))) {
-        counts[tag] = (counts[tag] ?? 0) + 1;
+    for (final e in await (select(mealEntries)..where((e) => e.deletedAt.isNull())).get()) {
+      final used = switch (kind) {
+        ListKind.foodUnit => e.items.where((i) => !i.drink).map((i) => i.unit),
+        ListKind.drinkUnit => e.items.where((i) => i.drink).map((i) => i.unit),
+        ListKind.measure => splitTags(e.measures),
+        ListKind.withWhom => splitTags(e.withWhom),
+        ListKind.sport => e.sports.map((s) => s.sport),
+      };
+      for (final value in used.map((v) => v.toLowerCase()).toSet()) {
+        counts[value] = (counts[value] ?? 0) + 1;
       }
     }
-    return counts.keys.toList()..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+    return counts;
   }
 
   /// Most recent meal per distinct set of foods; drinks have their own quick button.
@@ -289,6 +398,8 @@ class AppDatabase extends _$AppDatabase {
         'templates': [
           for (final r in await (select(mealTemplates)..where((t) => t.deletedAt.isNull())).get()) r.toJson(),
         ],
+        // Deleted values included, so the deletion survives a restore elsewhere.
+        'lists': [for (final r in await select(listValues).get()) r.toJson()],
       };
 
   // The UI parses days and times without checks; a backup file is untrusted input.
@@ -310,14 +421,18 @@ class AppDatabase extends _$AppDatabase {
         [for (final r in json[key] as List) r as Map<String, dynamic>];
 
     await transaction(() async {
-      // Backups from schema 1 lack the column.
-      for (final row in rows('entries').map((r) => MealEntry.fromJson({'running': false, ...r}))) {
+      // Backups from older schemas lack these columns.
+      for (final row in rows('entries').map((r) => MealEntry.fromJson({'running': false, 'sports': '[]', ...r}))) {
         _checkDay(row.day);
         if (!_isMinuteOfDay(row.startMinutes) || (row.endMinutes != null && !_isMinuteOfDay(row.endMinutes!))) {
           throw FormatException('Invalid time in entry ${row.id}');
         }
         if (!_isPercent(row.hunger) || !_isPercent(row.satiety)) {
           throw FormatException('Invalid hunger or satiety in entry ${row.id}');
+        }
+        // The duration picker only takes durations within a day.
+        if (row.sports.any((s) => s.sport.trim().isEmpty || (s.minutes != null && !_isMinuteOfDay(s.minutes!)))) {
+          throw FormatException('Invalid sport in entry ${row.id}');
         }
         final local = await (select(mealEntries)..where((e) => e.id.equals(row.id))).getSingleOrNull();
         if (local != null && !row.updatedAt.isAfter(local.updatedAt)) continue;
@@ -336,6 +451,19 @@ class AppDatabase extends _$AppDatabase {
         if (local != null && !row.updatedAt.isAfter(local.updatedAt)) continue;
         await into(mealTemplates).insertOnConflictUpdate(row);
         changed++;
+      }
+      if (json['lists'] == null) {
+        // From before the lists existed: their values are taken from the entries, as on the update.
+        await _fillLists(const {});
+      } else {
+        for (final row in rows('lists').map(ListValue.fromJson)) {
+          // An empty name would collide with "no unit" in the pickers.
+          if (row.name.trim().isEmpty) throw FormatException('Empty list value ${row.id}');
+          final local = await (select(listValues)..where((v) => v.id.equals(row.id))).getSingleOrNull();
+          if (local != null && !row.updatedAt.isAfter(local.updatedAt)) continue;
+          await into(listValues).insertOnConflictUpdate(row);
+          changed++;
+        }
       }
     });
     return changed;

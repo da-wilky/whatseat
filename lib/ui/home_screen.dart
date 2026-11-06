@@ -19,14 +19,14 @@ import 'templates_screen.dart';
 
 const _basePage = 100000;
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
   DateTime _today = dateOnly(DateTime.now());
   final _pages = PageController(initialPage: _basePage);
   late DateTime _day = _today;
@@ -135,14 +135,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           FloatingActionButton.small(
+            heroTag: 'sport',
+            tooltip: l.sport,
+            onPressed: () => openEntryEditor(context, EntryDraft.fresh(_day)..meal = MealType.sport),
+            child: const Icon(Icons.directions_run_rounded),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.small(
             heroTag: 'drink',
             tooltip: l.drink,
-            onPressed: () => openEntryEditor(
-              context,
-              EntryDraft.fresh(_day)
-                ..meal = MealType.drink
-                ..items = [FoodItem(quantity: 200, unit: drinkUnits(l).first, food: l.drinkDefault, drink: true)],
-            ),
+            onPressed: () {
+              final unit = ref.read(listsProvider).value?[ListKind.drinkUnit]?.firstOrNull;
+              openEntryEditor(
+                context,
+                EntryDraft.fresh(_day)
+                  ..meal = MealType.drink
+                  ..items = [
+                    FoodItem(
+                      quantity: 200,
+                      unit: unit?.name ?? '',
+                      unitPlural: unit?.plural ?? '',
+                      food: l.drinkDefault,
+                      drink: true,
+                    ),
+                  ],
+              );
+            },
             child: const Icon(Icons.water_drop_outlined),
           ),
           const SizedBox(height: 12),
@@ -390,7 +408,7 @@ class _DayTimeline extends StatelessWidget {
                   child: CircleAvatar(
                     radius: _marker / 2,
                     backgroundColor: mealColors(scheme, e.meal).$1,
-                    child: Icon(mealIcon(e.meal), size: 14, color: mealColors(scheme, e.meal).$2),
+                    child: Icon(entryIcon(e), size: 14, color: mealColors(scheme, e.meal).$2),
                   ),
                 ),
               ],
@@ -498,23 +516,23 @@ class _EntryCard extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final isSport = entry.meal == MealType.sport;
+    final measures = measuresText(entry);
 
-    Widget badge(IconData icon, String text, {bool alert = false}) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: alert ? scheme.errorContainer : scheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(8),
+    Widget badge(IconData icon, String text, {(Color, Color)? colors}) {
+      final (background, foreground) = colors ?? (scheme.surfaceContainerHighest, scheme.onSurfaceVariant);
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(8)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 14, color: foreground),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(text, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: foreground)),
           ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 14, color: alert ? scheme.onErrorContainer : scheme.onSurfaceVariant),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(text,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: alert ? scheme.onErrorContainer : scheme.onSurfaceVariant)),
-            ),
-          ]),
-        );
+        ]),
+      );
+    }
 
     return Dismissible(
       key: ValueKey(entry.id),
@@ -538,7 +556,7 @@ class _EntryCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 20,
                   backgroundColor: scheme.primaryContainer,
-                  child: Icon(mealIcon(entry.meal), color: scheme.onPrimaryContainer, size: 20),
+                  child: Icon(entryIcon(entry), color: scheme.onPrimaryContainer, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -546,21 +564,23 @@ class _EntryCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(children: [
-                        Text(mealLabel(l, entry.meal), style: theme.textTheme.titleSmall),
+                        Text(entryLabel(l, entry), style: theme.textTheme.titleSmall),
                         const Spacer(),
                         Text(timeRange(entry.startMinutes, entry.endMinutes),
                             style: theme.textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
                       ]),
                       const SizedBox(height: 4),
-                      Text(itemsSummary(l, entry.items), style: theme.textTheme.bodyMedium),
+                      Text(isSport ? measuresText(entry) : itemsSummary(l, entry.items), style: theme.textTheme.bodyMedium),
                       const SizedBox(height: 8),
                       Wrap(spacing: 6, runSpacing: 6, children: [
                         if (entry.hunger != null) badge(Icons.flatware_rounded, '${l.hunger} ${entry.hunger} %'),
                         if (entry.satiety != null) badge(Icons.sentiment_satisfied_alt_rounded, '${l.satiety} ${entry.satiety} %'),
                         if (entry.running) badge(Icons.timelapse_rounded, l.inProgress),
                         if (entry.withWhom.isNotEmpty) badge(Icons.people_outline, entry.withWhom),
-                        if (entry.binge) badge(Icons.warning_amber_rounded, l.binge, alert: true),
-                        if (entry.measures.isNotEmpty) badge(Icons.flag_outlined, entry.measures, alert: true),
+                        if (entry.binge)
+                          badge(Icons.warning_amber_rounded, l.binge, colors: (scheme.errorContainer, scheme.onErrorContainer)),
+                        if (!isSport && measures.isNotEmpty)
+                          badge(measureIcon, measures, colors: (scheme.tertiaryContainer, scheme.onTertiaryContainer)),
                       ]),
                     ],
                   ),

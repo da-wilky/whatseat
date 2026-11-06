@@ -148,6 +148,16 @@ class $MealEntriesTable extends MealEntries
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  @override
+  late final GeneratedColumnWithTypeConverter<List<SportSession>, String>
+  sports = GeneratedColumn<String>(
+    'sports',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  ).withConverter<List<SportSession>>($MealEntriesTable.$convertersports);
   static const VerificationMeta _situationAfterMeta = const VerificationMeta(
     'situationAfter',
   );
@@ -234,6 +244,7 @@ class $MealEntriesTable extends MealEntries
     satiety,
     binge,
     measures,
+    sports,
     situationAfter,
     running,
     templateId,
@@ -439,6 +450,12 @@ class $MealEntriesTable extends MealEntries
         DriftSqlType.string,
         data['${effectivePrefix}measures'],
       )!,
+      sports: $MealEntriesTable.$convertersports.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}sports'],
+        )!,
+      ),
       situationAfter: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}situation_after'],
@@ -475,6 +492,8 @@ class $MealEntriesTable extends MealEntries
       const EnumIndexConverter<MealType>(MealType.values);
   static JsonTypeConverter2<List<FoodItem>, String, String> $converteritems =
       const FoodItemsConverter();
+  static JsonTypeConverter2<List<SportSession>, String, String>
+  $convertersports = const SportsConverter();
 }
 
 class MealEntry extends DataClass implements Insertable<MealEntry> {
@@ -491,6 +510,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
   final int? satiety;
   final bool binge;
   final String measures;
+  final List<SportSession> sports;
   final String situationAfter;
   final bool running;
   final String? templateId;
@@ -511,6 +531,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
     this.satiety,
     required this.binge,
     required this.measures,
+    required this.sports,
     required this.situationAfter,
     required this.running,
     this.templateId,
@@ -546,6 +567,11 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
     }
     map['binge'] = Variable<bool>(binge);
     map['measures'] = Variable<String>(measures);
+    {
+      map['sports'] = Variable<String>(
+        $MealEntriesTable.$convertersports.toSql(sports),
+      );
+    }
     map['situation_after'] = Variable<String>(situationAfter);
     map['running'] = Variable<bool>(running);
     if (!nullToAbsent || templateId != null) {
@@ -580,6 +606,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
           : Value(satiety),
       binge: Value(binge),
       measures: Value(measures),
+      sports: Value(sports),
       situationAfter: Value(situationAfter),
       running: Value(running),
       templateId: templateId == null && nullToAbsent
@@ -616,6 +643,9 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
       satiety: serializer.fromJson<int?>(json['satiety']),
       binge: serializer.fromJson<bool>(json['binge']),
       measures: serializer.fromJson<String>(json['measures']),
+      sports: $MealEntriesTable.$convertersports.fromJson(
+        serializer.fromJson<String>(json['sports']),
+      ),
       situationAfter: serializer.fromJson<String>(json['situationAfter']),
       running: serializer.fromJson<bool>(json['running']),
       templateId: serializer.fromJson<String?>(json['templateId']),
@@ -645,6 +675,9 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
       'satiety': serializer.toJson<int?>(satiety),
       'binge': serializer.toJson<bool>(binge),
       'measures': serializer.toJson<String>(measures),
+      'sports': serializer.toJson<String>(
+        $MealEntriesTable.$convertersports.toJson(sports),
+      ),
       'situationAfter': serializer.toJson<String>(situationAfter),
       'running': serializer.toJson<bool>(running),
       'templateId': serializer.toJson<String?>(templateId),
@@ -668,6 +701,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
     Value<int?> satiety = const Value.absent(),
     bool? binge,
     String? measures,
+    List<SportSession>? sports,
     String? situationAfter,
     bool? running,
     Value<String?> templateId = const Value.absent(),
@@ -688,6 +722,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
     satiety: satiety.present ? satiety.value : this.satiety,
     binge: binge ?? this.binge,
     measures: measures ?? this.measures,
+    sports: sports ?? this.sports,
     situationAfter: situationAfter ?? this.situationAfter,
     running: running ?? this.running,
     templateId: templateId.present ? templateId.value : this.templateId,
@@ -718,6 +753,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
       satiety: data.satiety.present ? data.satiety.value : this.satiety,
       binge: data.binge.present ? data.binge.value : this.binge,
       measures: data.measures.present ? data.measures.value : this.measures,
+      sports: data.sports.present ? data.sports.value : this.sports,
       situationAfter: data.situationAfter.present
           ? data.situationAfter.value
           : this.situationAfter,
@@ -747,6 +783,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
           ..write('satiety: $satiety, ')
           ..write('binge: $binge, ')
           ..write('measures: $measures, ')
+          ..write('sports: $sports, ')
           ..write('situationAfter: $situationAfter, ')
           ..write('running: $running, ')
           ..write('templateId: $templateId, ')
@@ -772,6 +809,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
     satiety,
     binge,
     measures,
+    sports,
     situationAfter,
     running,
     templateId,
@@ -796,6 +834,7 @@ class MealEntry extends DataClass implements Insertable<MealEntry> {
           other.satiety == this.satiety &&
           other.binge == this.binge &&
           other.measures == this.measures &&
+          other.sports == this.sports &&
           other.situationAfter == this.situationAfter &&
           other.running == this.running &&
           other.templateId == this.templateId &&
@@ -818,6 +857,7 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
   final Value<int?> satiety;
   final Value<bool> binge;
   final Value<String> measures;
+  final Value<List<SportSession>> sports;
   final Value<String> situationAfter;
   final Value<bool> running;
   final Value<String?> templateId;
@@ -839,6 +879,7 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
     this.satiety = const Value.absent(),
     this.binge = const Value.absent(),
     this.measures = const Value.absent(),
+    this.sports = const Value.absent(),
     this.situationAfter = const Value.absent(),
     this.running = const Value.absent(),
     this.templateId = const Value.absent(),
@@ -861,6 +902,7 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
     this.satiety = const Value.absent(),
     this.binge = const Value.absent(),
     this.measures = const Value.absent(),
+    this.sports = const Value.absent(),
     this.situationAfter = const Value.absent(),
     this.running = const Value.absent(),
     this.templateId = const Value.absent(),
@@ -889,6 +931,7 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
     Expression<int>? satiety,
     Expression<bool>? binge,
     Expression<String>? measures,
+    Expression<String>? sports,
     Expression<String>? situationAfter,
     Expression<bool>? running,
     Expression<String>? templateId,
@@ -911,6 +954,7 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
       if (satiety != null) 'satiety': satiety,
       if (binge != null) 'binge': binge,
       if (measures != null) 'measures': measures,
+      if (sports != null) 'sports': sports,
       if (situationAfter != null) 'situation_after': situationAfter,
       if (running != null) 'running': running,
       if (templateId != null) 'template_id': templateId,
@@ -935,6 +979,7 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
     Value<int?>? satiety,
     Value<bool>? binge,
     Value<String>? measures,
+    Value<List<SportSession>>? sports,
     Value<String>? situationAfter,
     Value<bool>? running,
     Value<String?>? templateId,
@@ -957,6 +1002,7 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
       satiety: satiety ?? this.satiety,
       binge: binge ?? this.binge,
       measures: measures ?? this.measures,
+      sports: sports ?? this.sports,
       situationAfter: situationAfter ?? this.situationAfter,
       running: running ?? this.running,
       templateId: templateId ?? this.templateId,
@@ -1013,6 +1059,11 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
     if (measures.present) {
       map['measures'] = Variable<String>(measures.value);
     }
+    if (sports.present) {
+      map['sports'] = Variable<String>(
+        $MealEntriesTable.$convertersports.toSql(sports.value),
+      );
+    }
     if (situationAfter.present) {
       map['situation_after'] = Variable<String>(situationAfter.value);
     }
@@ -1053,6 +1104,7 @@ class MealEntriesCompanion extends UpdateCompanion<MealEntry> {
           ..write('satiety: $satiety, ')
           ..write('binge: $binge, ')
           ..write('measures: $measures, ')
+          ..write('sports: $sports, ')
           ..write('situationAfter: $situationAfter, ')
           ..write('running: $running, ')
           ..write('templateId: $templateId, ')
@@ -2035,12 +2087,468 @@ class MealTemplatesCompanion extends UpdateCompanion<MealTemplate> {
   }
 }
 
+class $ListValuesTable extends ListValues
+    with TableInfo<$ListValuesTable, ListValue> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ListValuesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<ListKind, int> kind =
+      GeneratedColumn<int>(
+        'kind',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<ListKind>($ListValuesTable.$converterkind);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pluralMeta = const VerificationMeta('plural');
+  @override
+  late final GeneratedColumn<String> plural = GeneratedColumn<String>(
+    'plural',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    kind,
+    name,
+    plural,
+    position,
+    updatedAt,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'list_values';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ListValue> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('plural')) {
+      context.handle(
+        _pluralMeta,
+        plural.isAcceptableOrUnknown(data['plural']!, _pluralMeta),
+      );
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_positionMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ListValue map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ListValue(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      kind: $ListValuesTable.$converterkind.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}kind'],
+        )!,
+      ),
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      plural: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}plural'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  $ListValuesTable createAlias(String alias) {
+    return $ListValuesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<ListKind, int, int> $converterkind =
+      const EnumIndexConverter<ListKind>(ListKind.values);
+}
+
+class ListValue extends DataClass implements Insertable<ListValue> {
+  final String id;
+  final ListKind kind;
+  final String name;
+  final String plural;
+  final int position;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  const ListValue({
+    required this.id,
+    required this.kind,
+    required this.name,
+    required this.plural,
+    required this.position,
+    required this.updatedAt,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    {
+      map['kind'] = Variable<int>($ListValuesTable.$converterkind.toSql(kind));
+    }
+    map['name'] = Variable<String>(name);
+    map['plural'] = Variable<String>(plural);
+    map['position'] = Variable<int>(position);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  ListValuesCompanion toCompanion(bool nullToAbsent) {
+    return ListValuesCompanion(
+      id: Value(id),
+      kind: Value(kind),
+      name: Value(name),
+      plural: Value(plural),
+      position: Value(position),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory ListValue.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ListValue(
+      id: serializer.fromJson<String>(json['id']),
+      kind: $ListValuesTable.$converterkind.fromJson(
+        serializer.fromJson<int>(json['kind']),
+      ),
+      name: serializer.fromJson<String>(json['name']),
+      plural: serializer.fromJson<String>(json['plural']),
+      position: serializer.fromJson<int>(json['position']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'kind': serializer.toJson<int>(
+        $ListValuesTable.$converterkind.toJson(kind),
+      ),
+      'name': serializer.toJson<String>(name),
+      'plural': serializer.toJson<String>(plural),
+      'position': serializer.toJson<int>(position),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  ListValue copyWith({
+    String? id,
+    ListKind? kind,
+    String? name,
+    String? plural,
+    int? position,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+  }) => ListValue(
+    id: id ?? this.id,
+    kind: kind ?? this.kind,
+    name: name ?? this.name,
+    plural: plural ?? this.plural,
+    position: position ?? this.position,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  ListValue copyWithCompanion(ListValuesCompanion data) {
+    return ListValue(
+      id: data.id.present ? data.id.value : this.id,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      name: data.name.present ? data.name.value : this.name,
+      plural: data.plural.present ? data.plural.value : this.plural,
+      position: data.position.present ? data.position.value : this.position,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ListValue(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('name: $name, ')
+          ..write('plural: $plural, ')
+          ..write('position: $position, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, kind, name, plural, position, updatedAt, deletedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ListValue &&
+          other.id == this.id &&
+          other.kind == this.kind &&
+          other.name == this.name &&
+          other.plural == this.plural &&
+          other.position == this.position &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class ListValuesCompanion extends UpdateCompanion<ListValue> {
+  final Value<String> id;
+  final Value<ListKind> kind;
+  final Value<String> name;
+  final Value<String> plural;
+  final Value<int> position;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const ListValuesCompanion({
+    this.id = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.name = const Value.absent(),
+    this.plural = const Value.absent(),
+    this.position = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ListValuesCompanion.insert({
+    required String id,
+    required ListKind kind,
+    required String name,
+    this.plural = const Value.absent(),
+    required int position,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       kind = Value(kind),
+       name = Value(name),
+       position = Value(position),
+       updatedAt = Value(updatedAt);
+  static Insertable<ListValue> custom({
+    Expression<String>? id,
+    Expression<int>? kind,
+    Expression<String>? name,
+    Expression<String>? plural,
+    Expression<int>? position,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (kind != null) 'kind': kind,
+      if (name != null) 'name': name,
+      if (plural != null) 'plural': plural,
+      if (position != null) 'position': position,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ListValuesCompanion copyWith({
+    Value<String>? id,
+    Value<ListKind>? kind,
+    Value<String>? name,
+    Value<String>? plural,
+    Value<int>? position,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<int>? rowid,
+  }) {
+    return ListValuesCompanion(
+      id: id ?? this.id,
+      kind: kind ?? this.kind,
+      name: name ?? this.name,
+      plural: plural ?? this.plural,
+      position: position ?? this.position,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<int>(
+        $ListValuesTable.$converterkind.toSql(kind.value),
+      );
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (plural.present) {
+      map['plural'] = Variable<String>(plural.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ListValuesCompanion(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('name: $name, ')
+          ..write('plural: $plural, ')
+          ..write('position: $position, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $MealEntriesTable mealEntries = $MealEntriesTable(this);
   late final $DayNotesTable dayNotes = $DayNotesTable(this);
   late final $MealTemplatesTable mealTemplates = $MealTemplatesTable(this);
+  late final $ListValuesTable listValues = $ListValuesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2049,6 +2557,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     mealEntries,
     dayNotes,
     mealTemplates,
+    listValues,
   ];
 }
 
@@ -2067,6 +2576,7 @@ typedef $$MealEntriesTableCreateCompanionBuilder =
       Value<int?> satiety,
       Value<bool> binge,
       Value<String> measures,
+      Value<List<SportSession>> sports,
       Value<String> situationAfter,
       Value<bool> running,
       Value<String?> templateId,
@@ -2090,6 +2600,7 @@ typedef $$MealEntriesTableUpdateCompanionBuilder =
       Value<int?> satiety,
       Value<bool> binge,
       Value<String> measures,
+      Value<List<SportSession>> sports,
       Value<String> situationAfter,
       Value<bool> running,
       Value<String?> templateId,
@@ -2173,6 +2684,12 @@ class $$MealEntriesTableFilterComposer
   ColumnFilters<String> get measures => $composableBuilder(
     column: $table.measures,
     builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<List<SportSession>, List<SportSession>, String>
+  get sports => $composableBuilder(
+    column: $table.sports,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
   );
 
   ColumnFilters<String> get situationAfter => $composableBuilder(
@@ -2280,6 +2797,11 @@ class $$MealEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get sports => $composableBuilder(
+    column: $table.sports,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get situationAfter => $composableBuilder(
     column: $table.situationAfter,
     builder: (column) => ColumnOrderings(column),
@@ -2367,6 +2889,9 @@ class $$MealEntriesTableAnnotationComposer
   GeneratedColumn<String> get measures =>
       $composableBuilder(column: $table.measures, builder: (column) => column);
 
+  GeneratedColumnWithTypeConverter<List<SportSession>, String> get sports =>
+      $composableBuilder(column: $table.sports, builder: (column) => column);
+
   GeneratedColumn<String> get situationAfter => $composableBuilder(
     column: $table.situationAfter,
     builder: (column) => column,
@@ -2434,6 +2959,7 @@ class $$MealEntriesTableTableManager
                 Value<int?> satiety = const Value.absent(),
                 Value<bool> binge = const Value.absent(),
                 Value<String> measures = const Value.absent(),
+                Value<List<SportSession>> sports = const Value.absent(),
                 Value<String> situationAfter = const Value.absent(),
                 Value<bool> running = const Value.absent(),
                 Value<String?> templateId = const Value.absent(),
@@ -2455,6 +2981,7 @@ class $$MealEntriesTableTableManager
                 satiety: satiety,
                 binge: binge,
                 measures: measures,
+                sports: sports,
                 situationAfter: situationAfter,
                 running: running,
                 templateId: templateId,
@@ -2478,6 +3005,7 @@ class $$MealEntriesTableTableManager
                 Value<int?> satiety = const Value.absent(),
                 Value<bool> binge = const Value.absent(),
                 Value<String> measures = const Value.absent(),
+                Value<List<SportSession>> sports = const Value.absent(),
                 Value<String> situationAfter = const Value.absent(),
                 Value<bool> running = const Value.absent(),
                 Value<String?> templateId = const Value.absent(),
@@ -2499,6 +3027,7 @@ class $$MealEntriesTableTableManager
                 satiety: satiety,
                 binge: binge,
                 measures: measures,
+                sports: sports,
                 situationAfter: situationAfter,
                 running: running,
                 templateId: templateId,
@@ -3047,6 +3576,249 @@ typedef $$MealTemplatesTableProcessedTableManager =
       MealTemplate,
       PrefetchHooks Function()
     >;
+typedef $$ListValuesTableCreateCompanionBuilder = ListValuesCompanion Function({
+  required String id,
+  required ListKind kind,
+  required String name,
+  Value<String> plural,
+  required int position,
+  required DateTime updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+typedef $$ListValuesTableUpdateCompanionBuilder = ListValuesCompanion Function({
+  Value<String> id,
+  Value<ListKind> kind,
+  Value<String> name,
+  Value<String> plural,
+  Value<int> position,
+  Value<DateTime> updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<int> rowid,
+});
+
+class $$ListValuesTableFilterComposer
+    extends Composer<_$AppDatabase, $ListValuesTable> {
+  $$ListValuesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<ListKind, ListKind, int> get kind =>
+      $composableBuilder(
+        column: $table.kind,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get plural => $composableBuilder(
+    column: $table.plural,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ListValuesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ListValuesTable> {
+  $$ListValuesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get plural => $composableBuilder(
+    column: $table.plural,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ListValuesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ListValuesTable> {
+  $$ListValuesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<ListKind, int> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get plural =>
+      $composableBuilder(column: $table.plural, builder: (column) => column);
+
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$ListValuesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ListValuesTable,
+          ListValue,
+          $$ListValuesTableFilterComposer,
+          $$ListValuesTableOrderingComposer,
+          $$ListValuesTableAnnotationComposer,
+          $$ListValuesTableCreateCompanionBuilder,
+          $$ListValuesTableUpdateCompanionBuilder,
+          (
+            ListValue,
+            BaseReferences<_$AppDatabase, $ListValuesTable, ListValue>,
+          ),
+          ListValue,
+          PrefetchHooks Function()
+        > {
+  $$ListValuesTableTableManager(_$AppDatabase db, $ListValuesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ListValuesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ListValuesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ListValuesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<ListKind> kind = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> plural = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ListValuesCompanion(
+                id: id,
+                kind: kind,
+                name: name,
+                plural: plural,
+                position: position,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required ListKind kind,
+                required String name,
+                Value<String> plural = const Value.absent(),
+                required int position,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ListValuesCompanion.insert(
+                id: id,
+                kind: kind,
+                name: name,
+                plural: plural,
+                position: position,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ListValuesTable, ListValue>(table),
+                  BaseReferences<_$AppDatabase, $ListValuesTable, ListValue>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ListValuesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ListValuesTable,
+      ListValue,
+      $$ListValuesTableFilterComposer,
+      $$ListValuesTableOrderingComposer,
+      $$ListValuesTableAnnotationComposer,
+      $$ListValuesTableCreateCompanionBuilder,
+      $$ListValuesTableUpdateCompanionBuilder,
+      (ListValue, BaseReferences<_$AppDatabase, $ListValuesTable, ListValue>),
+      ListValue,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3057,4 +3829,6 @@ class $AppDatabaseManager {
       $$DayNotesTableTableManager(_db, _db.dayNotes);
   $$MealTemplatesTableTableManager get mealTemplates =>
       $$MealTemplatesTableTableManager(_db, _db.mealTemplates);
+  $$ListValuesTableTableManager get listValues =>
+      $$ListValuesTableTableManager(_db, _db.listValues);
 }

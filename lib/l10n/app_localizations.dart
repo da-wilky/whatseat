@@ -521,8 +521,122 @@ abstract class AppLocalizations {
   /// No description provided for @measureDefaults.
   ///
   /// In de, this message translates to:
-  /// **'Sport|Erbrechen|Abführmittel'**
+  /// **'Erbrechen|Abführmittel'**
   String get measureDefaults;
+
+  /// No description provided for @sport.
+  ///
+  /// In de, this message translates to:
+  /// **'Sport'**
+  String get sport;
+
+  /// No description provided for @measure.
+  ///
+  /// In de, this message translates to:
+  /// **'Maßnahme'**
+  String get measure;
+
+  /// No description provided for @sportPick.
+  ///
+  /// In de, this message translates to:
+  /// **'Sportart'**
+  String get sportPick;
+
+  /// No description provided for @newSport.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Sportart …'**
+  String get newSport;
+
+  /// No description provided for @duration.
+  ///
+  /// In de, this message translates to:
+  /// **'Dauer'**
+  String get duration;
+
+  /// No description provided for @needOneMeasure.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte mindestens eine Maßnahme oder Sportart eintragen.'**
+  String get needOneMeasure;
+
+  /// No description provided for @statsSportTotals.
+  ///
+  /// In de, this message translates to:
+  /// **'Sport gesamt'**
+  String get statsSportTotals;
+
+  /// No description provided for @lists.
+  ///
+  /// In de, this message translates to:
+  /// **'Auswahllisten'**
+  String get lists;
+
+  /// No description provided for @listsHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Einheiten, Maßnahmen, Mit wem, Sportarten'**
+  String get listsHint;
+
+  /// No description provided for @listFoodUnits.
+  ///
+  /// In de, this message translates to:
+  /// **'Einheiten Essen'**
+  String get listFoodUnits;
+
+  /// No description provided for @listDrinkUnits.
+  ///
+  /// In de, this message translates to:
+  /// **'Einheiten Getränke'**
+  String get listDrinkUnits;
+
+  /// No description provided for @listMeasures.
+  ///
+  /// In de, this message translates to:
+  /// **'Maßnahmen'**
+  String get listMeasures;
+
+  /// No description provided for @listSports.
+  ///
+  /// In de, this message translates to:
+  /// **'Sportarten'**
+  String get listSports;
+
+  /// No description provided for @listEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch nichts in dieser Liste.'**
+  String get listEmpty;
+
+  /// No description provided for @listAdd.
+  ///
+  /// In de, this message translates to:
+  /// **'Hinzufügen'**
+  String get listAdd;
+
+  /// No description provided for @listValueExists.
+  ///
+  /// In de, this message translates to:
+  /// **'Gibt es schon'**
+  String get listValueExists;
+
+  /// No description provided for @listValueDeleted.
+  ///
+  /// In de, this message translates to:
+  /// **'„{name}“ gelöscht'**
+  String listValueDeleted(String name);
+
+  /// No description provided for @listUsage.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =0{nicht verwendet} =1{in 1 Eintrag} other{in {count} Einträgen}}'**
+  String listUsage(int count);
+
+  /// No description provided for @unitPlural.
+  ///
+  /// In de, this message translates to:
+  /// **'Mehrzahl (optional)'**
+  String get unitPlural;
 
   /// No description provided for @general.
   ///
@@ -667,6 +781,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Daten'**
   String get data;
+
+  /// No description provided for @backup.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup'**
+  String get backup;
 
   /// No description provided for @backupCreate.
   ///

@@ -46,7 +46,6 @@ void main() {
     ]));
     final suggestions = await db.foodSuggestions();
     expect([for (final s in suggestions.where((s) => s.last.drink)) s.food], ['Wasser']);
-    expect(await db.unitHistory(drink: true), ['ml']);
     expect(FoodItem.fromJson(const {'quantity': 1, 'unit': 'Scheibe', 'food': 'Brot'}).drink, isFalse);
   });
 
@@ -79,10 +78,15 @@ void main() {
       {...row, 'startMinutes': 24 * 60},
       {...row, 'hunger': 101},
       {...row, 'satiety': -1},
+      {...row, 'sports': '[{"sport":"Laufen","minutes":1440}]'},
+      {...row, 'sports': '[{"sport":" ","minutes":30}]'},
     ]) {
       await expectLater(other.importBackup({...backup, 'entries': [broken]}), throwsFormatException);
     }
     expect(await other.select(other.mealEntries).get(), isEmpty);
+    final value = {'id': 'x', 'kind': 0, 'name': ' ', 'plural': '', 'position': 0, 'updatedAt': 0, 'deletedAt': null};
+    await expectLater(other.importBackup({...backup, 'lists': [value]}), throwsFormatException);
+    expect(await other.select(other.listValues).get(), isEmpty);
   });
 
   test('backups carry their creation time, and those without are rejected', () async {
@@ -202,5 +206,57 @@ void main() {
     expect(days.single.entries.single.items.single.unit, 'Portion');
     final pdf = await buildProtocolPdf(l, days, 'Test');
     expect(String.fromCharCodes(pdf.take(4)), '%PDF');
+  });
+
+  test('lists start with the defaults and take the values of backups from before the lists', () async {
+    final seeded = AppDatabase.forTesting(NativeDatabase.memory(), listDefaults: const {
+      ListKind.foodUnit: [('Scheibe', 'Scheiben')],
+      ListKind.measure: [('Erbrechen', '')],
+    });
+    addTearDown(seeded.close);
+    await db.saveEntry(_entry('2026-10-29', 8 * 60, const [FoodItem(quantity: 2, unit: 'scheibe', food: 'Brot'), FoodItem(unit: 'Stk', food: 'Ei')])
+        .copyWith(measures: const Value('Laufen'), sports: const Value([SportSession(sport: 'Volleyball', minutes: 90)])));
+    final backup = await db.exportBackup()
+      ..remove('lists');
+
+    await seeded.importBackup(backup);
+    final lists = await seeded.watchLists().first;
+    String names(ListKind kind) => lists.where((v) => v.kind == kind).map((v) => v.name).join('|');
+    expect(names(ListKind.foodUnit), 'Scheibe|Stk', reason: 'names are matched ignoring case');
+    expect(names(ListKind.measure), 'Erbrechen|Laufen');
+    expect(names(ListKind.sport), 'Volleyball');
+  });
+
+  test('a deleted list value stays deleted when an older backup is restored', () async {
+    await db.addListValue(ListKind.sport, 'Volleyball');
+    final old = await db.exportBackup();
+    final id = (await db.watchLists().first).single.id;
+    await db.updateListValue(id, deleted: true);
+    await db.purgeDeleted();
+
+    await db.importBackup(old);
+    expect(await db.watchLists().first, isEmpty);
+
+    await db.addListValue(ListKind.sport, 'volleyball');
+    expect((await db.watchLists().first).single.id, id, reason: 'adding it again revives it instead of a duplicate');
+  });
+
+  test('units keep the plural they were entered with; older items fall back to the built-in ones', () async {
+    final l = lookupAppLocalizations(const Locale('de'));
+    expect(formatAmount(l, const FoodItem(quantity: 2, unit: 'Stk', unitPlural: 'Stücke', food: 'Ei')), '2 Stücke');
+    expect(formatAmount(l, const FoodItem(quantity: 1, unit: 'Stk', unitPlural: 'Stücke', food: 'Ei')), '1 Stk');
+    expect(formatAmount(l, const FoodItem(quantity: 2, unit: 'Scheibe', food: 'Brot')), '2 Scheiben');
+  });
+
+  test('sports count as measures and remember their last duration', () async {
+    final l = lookupAppLocalizations(const Locale('de'));
+    await db.saveEntry(_entry('2026-10-28', 18 * 60, const [])
+        .copyWith(meal: const Value(MealType.sport), sports: const Value([SportSession(sport: 'Volleyball', minutes: 60)])));
+    await db.saveEntry(_entry('2026-10-29', 18 * 60, const [])
+        .copyWith(meal: const Value(MealType.sport), sports: const Value([SportSession(sport: 'Volleyball', minutes: 90)])));
+
+    expect(await db.lastSportMinutes(), {'volleyball': 90});
+    final days = await loadProtocol(db, DateTime(2026, 10, 29), DateTime(2026, 10, 29));
+    expect(buildProtocolCsv(l, days), contains('Volleyball 1:30 h'));
   });
 }

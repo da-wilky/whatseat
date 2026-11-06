@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/database.dart';
+import 'data/models.dart';
 
 const secureStorage = FlutterSecureStorage(
   // The default wipes every secret on a read error, the DB key included; failing lands on the recovery screen instead.
@@ -65,7 +66,6 @@ class AppSettings {
     required this.biometricEnabled,
     required this.lockTimeoutSeconds,
     required this.pinLength,
-    required this.customUnits,
   });
 
   /// Empty means: follow the system language.
@@ -75,7 +75,6 @@ class AppSettings {
   final bool biometricEnabled;
   final int lockTimeoutSeconds;
   final int pinLength;
-  final List<String> customUnits;
 
   Locale? get locale => localeCode.isEmpty ? null : Locale(localeCode);
 }
@@ -93,7 +92,6 @@ class SettingsNotifier extends Notifier<AppSettings> {
       biometricEnabled: p.getBool('biometricEnabled') ?? false,
       lockTimeoutSeconds: p.getInt('lockTimeout') ?? 60,
       pinLength: p.getInt('pinLength') ?? 4,
-      customUnits: p.getStringList('customUnits') ?? const [],
     );
   }
 
@@ -124,12 +122,6 @@ class SettingsNotifier extends Notifier<AppSettings> {
     ref.invalidateSelf();
   }
 
-  Future<void> addUnit(String unit) async {
-    if (state.customUnits.contains(unit)) return;
-    await _prefs.setStringList('customUnits', [...state.customUnits, unit]);
-    ref.invalidateSelf();
-  }
-
   Future<void> setLockTimeout(int seconds) async {
     await _prefs.setInt('lockTimeout', seconds);
     ref.invalidateSelf();
@@ -149,6 +141,12 @@ final daysWithEntriesProvider = StreamProvider.autoDispose.family<Set<String>, (
 
 final templatesProvider =
     StreamProvider.autoDispose<List<MealTemplate>>((ref) => ref.watch(databaseProvider).watchTemplates());
+
+/// Kept alive from the start (see app.dart), so an editor has its default units on the first frame.
+final listsProvider = StreamProvider<Map<ListKind, List<ListValue>>>((ref) => ref
+    .watch(databaseProvider)
+    .watchLists()
+    .map((values) => {for (final kind in ListKind.values) kind: values.where((v) => v.kind == kind).toList()}));
 
 final runningMealProvider =
     StreamProvider.autoDispose<MealEntry?>((ref) => ref.watch(databaseProvider).watchRunning());

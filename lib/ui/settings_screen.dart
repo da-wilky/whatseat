@@ -18,6 +18,7 @@ import 'auto_backup_screen.dart';
 import 'backup_dialogs.dart';
 import 'entry_editor.dart';
 import 'export_screen.dart';
+import 'lists_screen.dart';
 import 'templates_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -197,6 +198,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: Text(l.templates),
             onTap: () => push(const TemplatesScreen()),
           ),
+          ListTile(
+            leading: const Icon(Icons.list_alt_rounded),
+            title: Text(l.lists),
+            subtitle: Text(l.listsHint),
+            onTap: () => push(const ListsScreen()),
+          ),
+          header(l.backup),
           ListTile(
             leading: const Icon(Icons.cloud_sync_outlined),
             title: Text(l.autoBackup),

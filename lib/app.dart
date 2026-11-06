@@ -40,6 +40,7 @@ class WhatsEatApp extends ConsumerWidget {
     final locale = ref.watch(settingsProvider.select((s) => s.locale));
     // Started with the app, so changes are watched and pending backups retried from the first frame.
     ref.listen(autoBackupProvider, (_, _) {});
+    ref.listen(listsProvider, (_, _) {});
     return MaterialApp(
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,

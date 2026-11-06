@@ -52,9 +52,9 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
 
   bool _matches(MealEntry e) {
     if (_meals.isNotEmpty && !_meals.contains(e.meal)) return false;
-    if (_incidentsOnly && !e.binge && e.measures.isEmpty) return false;
+    if (_incidentsOnly && !e.binge && measuresText(e).isEmpty) return false;
     final q = _query.toLowerCase();
-    return [e.withWhom, e.situationBefore, e.appetiteFor, e.situationAfter, e.measures, for (final i in e.items) ...[i.food, for (final p in i.parts) p.food]]
+    return [e.withWhom, e.situationBefore, e.appetiteFor, e.situationAfter, measuresText(e), for (final i in e.items) ...[i.food, for (final p in i.parts) p.food]]
         .any((s) => s.toLowerCase().contains(q));
   }
 
@@ -119,6 +119,11 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
                 sliver: SliverToBoxAdapter(child: _RangeOverview(days: days, onTapDay: _jumpTo)),
               ),
+              if (_SportTotals.totals(days).isNotEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                  sliver: SliverToBoxAdapter(child: _SportTotals(days: days)),
+                ),
               for (final day in days) _daySection(l, day),
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ],
@@ -307,7 +312,11 @@ class _RangeOverview extends StatelessWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: mealColors(scheme, e.meal).$1,
-                            border: e.binge || e.measures.isNotEmpty ? Border.all(color: scheme.error, width: 2) : null,
+                            border: e.binge
+                                ? Border.all(color: scheme.error, width: 2)
+                                : measuresText(e).isNotEmpty
+                                ? Border.all(color: scheme.tertiary, width: 2)
+                                : null,
                           ),
                         ),
                       ),
@@ -347,6 +356,50 @@ class _RangeOverview extends StatelessWidget {
   }
 }
 
+/// Time per sport over the shown days, longest first.
+class _SportTotals extends StatelessWidget {
+  const _SportTotals({required this.days});
+
+  final List<ProtocolDay> days;
+
+  static Map<String, int> totals(List<ProtocolDay> days) {
+    final minutes = <String, int>{};
+    for (final s in days.expand((d) => d.entries).expand((e) => e.sports)) {
+      minutes[s.sport] = (minutes[s.sport] ?? 0) + (s.minutes ?? 0);
+    }
+    return minutes;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final minutes = totals(days);
+    final sorted = minutes.keys.toList()..sort((a, b) => minutes[b]!.compareTo(minutes[a]!));
+    final body = theme.textTheme.bodyMedium;
+
+    return SectionCard(title: l.statsSportTotals, icon: Icons.directions_run_rounded, children: [
+      for (final sport in sorted)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Row(children: [
+            Expanded(child: Text(sport, style: body)),
+            Text(formatDuration(minutes[sport]!),
+                style: body?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          ]),
+        ),
+      if (sorted.length > 1) ...[
+        const Divider(height: 16),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(formatDuration(minutes.values.fold(0, (a, b) => a + b)),
+              style: body?.copyWith(fontWeight: FontWeight.w600)),
+        ),
+      ],
+    ]);
+  }
+}
+
 class _ProtocolCard extends StatefulWidget {
   const _ProtocolCard({super.key, required this.entry, required this.onEdit});
 
@@ -368,6 +421,8 @@ class _ProtocolCardState extends State<_ProtocolCard> {
     final e = widget.entry;
     final (background, foreground) = mealColors(scheme, e.meal);
     final body = theme.textTheme.bodyMedium;
+    final isSport = e.meal == MealType.sport;
+    final measures = measuresText(e);
 
     Widget heading(String text) => Padding(
           padding: const EdgeInsets.only(top: 16, bottom: 2),
@@ -394,12 +449,16 @@ class _ProtocolCardState extends State<_ProtocolCard> {
             padding: const EdgeInsets.all(14),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Row(children: [
-                CircleAvatar(radius: 16, backgroundColor: background, child: Icon(mealIcon(e.meal), size: 16, color: foreground)),
+                CircleAvatar(radius: 16, backgroundColor: background, child: Icon(entryIcon(e), size: 16, color: foreground)),
                 const SizedBox(width: 10),
-                Text(mealLabel(l, e.meal), style: theme.textTheme.titleSmall),
-                if (e.binge || e.measures.isNotEmpty) ...[
+                Text(entryLabel(l, e), style: theme.textTheme.titleSmall),
+                if (e.binge) ...[
                   const SizedBox(width: 6),
                   Icon(Icons.warning_amber_rounded, size: 16, color: scheme.error),
+                ],
+                if (measures.isNotEmpty && !isSport) ...[
+                  const SizedBox(width: 6),
+                  Icon(measureIcon, size: 16, color: scheme.tertiary),
                 ],
                 const Spacer(),
                 Text(timeRange(e.startMinutes, e.endMinutes),
@@ -413,7 +472,8 @@ class _ProtocolCardState extends State<_ProtocolCard> {
               ]),
               if (!_expanded) ...[
                 const SizedBox(height: 8),
-                Text(itemsSummary(l, e.items), maxLines: 2, overflow: TextOverflow.ellipsis, style: body),
+                Text(isSport ? measures : itemsSummary(l, e.items),
+                    maxLines: 2, overflow: TextOverflow.ellipsis, style: body),
               ] else ...[
                 if (e.withWhom.isNotEmpty || e.situationBefore.isNotEmpty || e.appetiteFor.isNotEmpty) ...[
                   heading(l.sectionBefore),
@@ -451,8 +511,8 @@ class _ProtocolCardState extends State<_ProtocolCard> {
                   field(l.situationAfter, e.situationAfter),
                 ],
                 heading(l.sectionBehaviour),
-                field(l.binge, e.binge ? l.yes : l.no),
-                if (e.measures.isNotEmpty) field(l.measures, e.measures),
+                if (!isSport) field(l.binge, e.binge ? l.yes : l.no),
+                if (measures.isNotEmpty) field(l.measures, measures),
                 const SizedBox(height: 4),
                 Align(
                   alignment: Alignment.centerRight,
