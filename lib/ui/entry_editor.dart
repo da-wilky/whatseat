@@ -712,7 +712,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
       for (final m in MealType.values)
         if (m != MealType.drink && m != MealType.sport)
           ChoiceChip(
-            avatar: Icon(mealIcon(m), size: 18),
+            avatar: _d.meal == m ? null : Icon(mealIcon(m), size: 18),
             label: Text(mealLabel(l, m)),
             selected: _d.meal == m,
             onSelected: (_) => _change(() => _d.meal = m),

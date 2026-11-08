@@ -420,6 +420,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get customRange => 'Zeitraum wählen';
 
   @override
+  String get sinceLastMeeting => 'Seit letztem Termin';
+
+  @override
+  String get lastMeeting => 'Letzter Termin';
+
+  @override
+  String get lastMeetingUnset => 'Letzter Termin: nicht gesetzt';
+
+  @override
   String get exportPdf => 'PDF-Protokoll ansehen & teilen';
 
   @override

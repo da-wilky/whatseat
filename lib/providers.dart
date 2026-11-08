@@ -66,6 +66,7 @@ class AppSettings {
     required this.biometricEnabled,
     required this.lockTimeoutSeconds,
     required this.pinLength,
+    required this.lastMeeting,
   });
 
   /// Empty means: follow the system language.
@@ -75,6 +76,7 @@ class AppSettings {
   final bool biometricEnabled;
   final int lockTimeoutSeconds;
   final int pinLength;
+  final DateTime? lastMeeting;
 
   Locale? get locale => localeCode.isEmpty ? null : Locale(localeCode);
 }
@@ -92,7 +94,13 @@ class SettingsNotifier extends Notifier<AppSettings> {
       biometricEnabled: p.getBool('biometricEnabled') ?? false,
       lockTimeoutSeconds: p.getInt('lockTimeout') ?? 60,
       pinLength: p.getInt('pinLength') ?? 4,
+      lastMeeting: switch (p.getString('lastMeeting')) { final day? => parseDayKey(day), null => null },
     );
+  }
+
+  Future<void> setLastMeeting(DateTime day) async {
+    await _prefs.setString('lastMeeting', dayKey(day));
+    ref.invalidateSelf();
   }
 
   Future<void> setLocale(String code) async {

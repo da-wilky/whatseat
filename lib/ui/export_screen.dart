@@ -26,13 +26,21 @@ class ExportScreen extends ConsumerStatefulWidget {
 }
 
 class _ExportScreenState extends ConsumerState<ExportScreen> {
-  late DateTimeRange _range = DateTimeRange(start: dateOnly(widget.initialDay), end: dateOnly(widget.initialDay));
+  late DateTimeRange _range = switch (ref.read(settingsProvider).lastMeeting) {
+    final meeting? => _sinceMeeting(meeting),
+    null => DateTimeRange(start: dateOnly(widget.initialDay), end: dateOnly(widget.initialDay)),
+  };
+
+  static DateTimeRange _sinceMeeting(DateTime meeting) {
+    final today = dateOnly(DateTime.now());
+    return DateTimeRange(start: meeting.isAfter(today) ? today : meeting, end: today);
+  }
 
   String get _fileBase => 'essprotokoll_${dayKey(_range.start)}_${dayKey(_range.end)}';
 
-  void _setLastDays(int days) {
+  static DateTimeRange _lastDays(int days) {
     final today = dateOnly(DateTime.now());
-    setState(() => _range = DateTimeRange(start: DateTime(today.year, today.month, today.day - days + 1), end: today));
+    return DateTimeRange(start: DateTime(today.year, today.month, today.day - days + 1), end: today);
   }
 
   Future<List<ProtocolDay>> _load() => loadProtocol(ref.read(databaseProvider), _range.start, _range.end);
@@ -115,6 +123,15 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
     final l = AppLocalizations.of(context);
     final format = DateFormat.yMMMd(l.localeName);
     final today = dateOnly(DateTime.now());
+    final lastMeeting = ref.watch(settingsProvider).lastMeeting;
+    final settings = ref.read(settingsProvider.notifier);
+    final presets = [
+      if (lastMeeting != null) (l.sinceLastMeeting, Icons.event_outlined, _sinceMeeting(lastMeeting)),
+      (l.today, null, _lastDays(1)),
+      (l.lastDays(7), null, _lastDays(7)),
+      (l.lastDays(14), null, _lastDays(14)),
+    ];
+    final selected = presets.indexWhere((p) => p.$3 == _range);
     final rangeText = _range.start == _range.end
         ? format.format(_range.start)
         : '${format.format(_range.start)} – ${format.format(_range.end)}';
@@ -128,13 +145,18 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
             Text(rangeText, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
             Wrap(spacing: 8, runSpacing: 8, children: [
-              ActionChip(label: Text(l.today), onPressed: () => _setLastDays(1)),
-              ActionChip(label: Text(l.lastDays(7)), onPressed: () => _setLastDays(7)),
-              ActionChip(label: Text(l.lastDays(14)), onPressed: () => _setLastDays(14)),
-              ActionChip(
-                avatar: const Icon(Icons.edit_calendar_outlined, size: 18),
+              for (final (i, (label, icon, range)) in presets.indexed)
+                ChoiceChip(
+                  avatar: icon == null || i == selected ? null : Icon(icon, size: 18),
+                  label: Text(label),
+                  selected: i == selected,
+                  onSelected: (_) => setState(() => _range = range),
+                ),
+              ChoiceChip(
+                avatar: selected == -1 ? null : const Icon(Icons.edit_calendar_outlined, size: 18),
                 label: Text(l.customRange),
-                onPressed: () async {
+                selected: selected == -1,
+                onSelected: (_) async {
                   final picked = await showDateRangePicker(
                     context: context,
                     firstDate: DateTime(2020),
@@ -142,6 +164,26 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
                     initialDateRange: _range.end.isAfter(today) ? null : _range,
                   );
                   if (picked != null) setState(() => _range = picked);
+                },
+              ),
+            ]),
+            const Divider(height: 24),
+            Row(children: [
+              Expanded(
+                child: Text(lastMeeting == null ? l.lastMeetingUnset : '${l.lastMeeting}: ${format.format(lastMeeting)}'),
+              ),
+              TextButton(onPressed: () => settings.setLastMeeting(today), child: Text(l.today)),
+              IconButton(
+                tooltip: l.lastMeeting,
+                icon: const Icon(Icons.edit_calendar_outlined),
+                onPressed: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    firstDate: DateTime(2020),
+                    lastDate: today,
+                    initialDate: lastMeeting == null || lastMeeting.isAfter(today) ? today : lastMeeting,
+                  );
+                  if (picked != null) await settings.setLastMeeting(picked);
                 },
               ),
             ]),

@@ -154,7 +154,7 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
               onSelected: (_) => _setRange(_lastDaysRange(n), n),
             ),
           ChoiceChip(
-            avatar: const Icon(Icons.edit_calendar_outlined, size: 18),
+            avatar: _lastDays == null ? null : const Icon(Icons.edit_calendar_outlined, size: 18),
             label: Text(_lastDays == null ? '${format.format(_range.start)} – ${format.format(_range.end)}' : l.customRange),
             selected: _lastDays == null,
             onSelected: (_) async {
@@ -172,13 +172,13 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
         row([
           for (final meal in MealType.values)
             FilterChip(
-              avatar: Icon(mealIcon(meal), size: 18),
+              avatar: _meals.contains(meal) ? null : Icon(mealIcon(meal), size: 18),
               label: Text(mealLabel(l, meal)),
               selected: _meals.contains(meal),
               onSelected: (on) => setState(() => on ? _meals.add(meal) : _meals.remove(meal)),
             ),
           FilterChip(
-            avatar: const Icon(Icons.warning_amber_rounded, size: 18),
+            avatar: _incidentsOnly ? null : const Icon(Icons.warning_amber_rounded, size: 18),
             label: Text(l.statsIncidents),
             selected: _incidentsOnly,
             onSelected: (on) => setState(() => _incidentsOnly = on),

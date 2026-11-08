@@ -848,6 +848,24 @@ abstract class AppLocalizations {
   /// **'Zeitraum wählen'**
   String get customRange;
 
+  /// No description provided for @sinceLastMeeting.
+  ///
+  /// In de, this message translates to:
+  /// **'Seit letztem Termin'**
+  String get sinceLastMeeting;
+
+  /// No description provided for @lastMeeting.
+  ///
+  /// In de, this message translates to:
+  /// **'Letzter Termin'**
+  String get lastMeeting;
+
+  /// No description provided for @lastMeetingUnset.
+  ///
+  /// In de, this message translates to:
+  /// **'Letzter Termin: nicht gesetzt'**
+  String get lastMeetingUnset;
+
   /// No description provided for @exportPdf.
   ///
   /// In de, this message translates to:

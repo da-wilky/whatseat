@@ -416,6 +416,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customRange => 'Choose period';
 
   @override
+  String get sinceLastMeeting => 'Since last meeting';
+
+  @override
+  String get lastMeeting => 'Last meeting';
+
+  @override
+  String get lastMeetingUnset => 'Last meeting: not set';
+
+  @override
   String get exportPdf => 'View & share PDF protocol';
 
   @override
