@@ -163,8 +163,9 @@ Future<Uint8List> buildProtocolPdf(AppLocalizations l, List<ProtocolDay> days, S
                 cell(measuresText(e)),
                 cell(e.situationAfter),
               ]),
-            for (var i = day.entries.length; i < 8; i++)
-              pw.TableRow(children: [for (var c = 0; c < 10; c++) pw.SizedBox(height: 30)]),
+            if (days.isEmpty)
+              for (var i = 0; i < 8; i++)
+                pw.TableRow(children: [for (var c = 0; c < 10; c++) pw.SizedBox(height: 30)]),
           ],
         ),
         if (note.isNotEmpty)
