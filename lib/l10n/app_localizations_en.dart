@@ -155,6 +155,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mealSnack => 'Snack';
 
   @override
+  String get moreDetails => 'More details';
+
+  @override
   String get timeFrom => 'from';
 
   @override

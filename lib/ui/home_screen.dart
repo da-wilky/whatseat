@@ -164,6 +164,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
             child: const Icon(Icons.water_drop_outlined),
           ),
           const SizedBox(height: 12),
+          FloatingActionButton.small(
+            heroTag: 'snack',
+            tooltip: l.mealSnack,
+            onPressed: () =>
+                openEntryEditor(context, EntryDraft.fresh(_day)..meal = MealType.snack, mode: EditorMode.snack),
+            child: Icon(mealIcon(MealType.snack)),
+          ),
+          const SizedBox(height: 12),
           FloatingActionButton.extended(
             onPressed: () => showQuickAddSheet(context, _day),
             icon: const Icon(Icons.add_rounded),

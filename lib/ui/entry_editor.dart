@@ -146,7 +146,7 @@ class EntryDraft {
   }
 }
 
-enum EditorMode { edit, start, finish }
+enum EditorMode { edit, start, finish, snack }
 
 Future<void> openEntryEditor(BuildContext context, EntryDraft draft, {EditorMode mode = EditorMode.edit}) => Navigator.push(
       context,
@@ -262,6 +262,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
   Map<String, List<String>> _partHistory = const {};
   Map<String, int> _sportMinutes = const {};
   bool _dirty = false;
+  bool _details = false;
 
   bool get _isDrink => _d.meal == MealType.drink;
 
@@ -305,7 +306,9 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
 
   _ItemRow _newRow({required bool drink}) {
     final quantity = drink ? 200.0 : 1.0;
-    final unit = _list(drink ? ListKind.drinkUnit : ListKind.foodUnit).firstOrNull;
+    final unit = drink || widget.mode != EditorMode.snack
+        ? _list(drink ? ListKind.drinkUnit : ListKind.foodUnit).firstOrNull
+        : null;
     return _ItemRow(
       FoodItem(quantity: quantity, unit: unit?.name ?? '', unitPlural: unit?.plural ?? '', food: '', drink: drink),
       _formatQuantity(quantity),
@@ -705,17 +708,19 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
     const gap = SizedBox(height: 12);
     final saveLabel = widget.mode == EditorMode.start ? l.startEatingSave : l.save;
 
+    final mealChips = Wrap(spacing: 8, runSpacing: 8, children: [
+      for (final m in MealType.values)
+        if (m != MealType.drink && m != MealType.sport)
+          ChoiceChip(
+            avatar: Icon(mealIcon(m), size: 18),
+            label: Text(mealLabel(l, m)),
+            selected: _d.meal == m,
+            onSelected: (_) => _change(() => _d.meal = m),
+          ),
+    ]);
+    final mealType = SectionCard(title: l.sectionMeal, icon: Icons.restaurant_menu_rounded, children: [mealChips]);
     final meal = SectionCard(title: l.sectionMeal, icon: Icons.schedule_rounded, children: [
-      Wrap(spacing: 8, runSpacing: 8, children: [
-        for (final m in MealType.values)
-          if (m != MealType.drink && m != MealType.sport)
-            ChoiceChip(
-              avatar: Icon(mealIcon(m), size: 18),
-              label: Text(mealLabel(l, m)),
-              selected: _d.meal == m,
-              onSelected: (_) => _change(() => _d.meal = m),
-            ),
-      ]),
+      mealChips,
       gap,
       Row(children: [
         ActionChip(
@@ -839,6 +844,14 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
       icon: isMeasureEntry(_d.meal, _d.measures) ? measureIcon : Icons.directions_run_rounded,
       children: measures,
     );
+    final details = Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        onPressed: () => setState(() => _details = !_details),
+        icon: Icon(_details ? Icons.expand_less_rounded : Icons.expand_more_rounded),
+        label: Text(l.moreDetails),
+      ),
+    );
     final sections = _isDrink
         ? [time, drinks]
         : _isSport
@@ -847,6 +860,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
             EditorMode.start => [meal, who, before],
             EditorMode.finish => [food, drinks, after, behaviour, meal, who, before],
             EditorMode.edit => [meal, food, drinks, who, before, after, behaviour],
+            EditorMode.snack => [time, food, details, if (_details) ...[mealType, drinks, who, before, after, behaviour]],
           };
 
     Widget hint(IconData icon, String text) => Padding(
@@ -879,6 +893,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
           title: Text(switch (widget.mode) {
             EditorMode.start => l.startEating,
             EditorMode.finish => l.finishEating,
+            EditorMode.snack => mealLabel(l, _d.meal),
             EditorMode.edit => _d.id != null
                 ? l.editEntry
                 : _isDrink

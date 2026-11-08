@@ -380,6 +380,12 @@ abstract class AppLocalizations {
   /// **'Snack'**
   String get mealSnack;
 
+  /// No description provided for @moreDetails.
+  ///
+  /// In de, this message translates to:
+  /// **'Weitere Angaben'**
+  String get moreDetails;
+
   /// No description provided for @timeFrom.
   ///
   /// In de, this message translates to:

@@ -156,6 +156,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get mealSnack => 'Snack';
 
   @override
+  String get moreDetails => 'Weitere Angaben';
+
+  @override
   String get timeFrom => 'von';
 
   @override
